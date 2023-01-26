@@ -13,6 +13,8 @@ pub fn main() {
     // answer: 1.114156723022461
     println!("solution_by_chords   : {x}", x=find_solution_by_chords(0.1, 1.5));
     // answer: 1.1141571408717854
+    println!("solution_by_newton   : {x}", x=find_solution_by_newton(1.));
+    // answer: 1.114157140871924
 }
 
 
@@ -37,6 +39,21 @@ fn find_solution_by_chords(x0: f64, x1: f64) -> f64 {
         x_n = x_n_m1 - f(x_n_m1) * (x_n_m1 - x_n_m2) / (f(x_n_m1) - f(x_n_m2));
         if (x_n - x_n_m1).abs() < TOLERANCE { return x_n; }
         x_n_m2 = x_n_m1;
+        x_n_m1 = x_n;
+    }
+    x_n
+}
+
+fn find_solution_by_newton(x: f64) -> f64 {
+    let mut x_n_m1 = x;    // X_(n-1)
+    let mut x_n: f64 = 0.; // X_n
+    fn d(x: f64) -> f64 {
+        const DELTA: f64 = 1e-3;
+        (f(x+DELTA) - f(x-DELTA)) / (2.*DELTA)
+    }
+    for _ in 0..30 {
+        x_n = x_n_m1 - f(x_n_m1) / d(x_n_m1);
+        if (x_n - x_n_m1).abs() < TOLERANCE { return x_n; }
         x_n_m1 = x_n;
     }
     x_n
