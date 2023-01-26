@@ -1,5 +1,5 @@
 [package]
-name = "solve_equation_in_compile_time"
+name = "solve_equation_at_compile_time"
 version = "1.0.0"
 edition = "2021"
 
