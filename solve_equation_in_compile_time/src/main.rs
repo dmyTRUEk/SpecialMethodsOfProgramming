@@ -26,7 +26,7 @@ pub fn main() {
 
 
 const fn find_solution_by_dichotomy(l: f64, r: f64) -> f64 {
-    let m: f64 = (l + r) / 2.;
+    let m = (l + r) / 2.;
     const TOLERANCE: f64 = 1e-6;
     if abs(f(m)) < TOLERANCE { return m; }
     match f(m).partial_cmp(&0.) {
@@ -48,7 +48,7 @@ const fn abs(x: f64) -> f64 {
 }
 
 const fn powi(x: f64, n: i8) -> f64 {
-    let mut r: f64 = 1.;
+    let mut r = 1.;
     let mut i = 0;
     while i < n {
         r *= x;
@@ -58,7 +58,7 @@ const fn powi(x: f64, n: i8) -> f64 {
 }
 
 const fn fact(n: u8) -> u64 {
-    let mut r: u64 = 1;
+    let mut r = 1;
     let mut i = 2;
     while i <= n {
         r *= i as u64;
@@ -68,10 +68,10 @@ const fn fact(n: u8) -> u64 {
 }
 
 const fn sin(x: f64) -> f64 {
-    let x: f64 = x % (2.*PI); // TODO: % PI/2
-    let mut r: f64 = x;
+    let x = x % (2.*PI); // TODO: % PI/2
+    let mut r = x;
     let mut i = 3;
-    let mut sign: i64 = -1;
+    let mut sign = -1;
     while i < 21 {
         r += powi(x, i) / (sign * fact(i as u8) as i64) as f64;
         sign = -sign;
