@@ -15,6 +15,8 @@ pub fn main() {
     // answer: 1.1141571408717854
     println!("solution_by_newton   : {x}", x=find_solution_by_newton(1.));
     // answer: 1.114157140871924
+    println!("solution_by_direct_iterstions: {x}", x=find_solution_by_direct_iterations(1.));
+    // answer: -2.772604525254792
 }
 
 
@@ -57,5 +59,16 @@ fn find_solution_by_newton(x: f64) -> f64 {
         x_n_m1 = x_n;
     }
     x_n
+}
+
+fn find_solution_by_direct_iterations(x: f64) -> f64 {
+    let mut x_prev = f64::NAN;
+    let mut x = x;
+    for _ in 0..1000 {
+        x = f(x) + x;
+        if (x - x_prev).abs() < TOLERANCE { return x; }
+        x_prev = x;
+    }
+    x
 }
 
