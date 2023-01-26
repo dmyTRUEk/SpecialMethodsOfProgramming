@@ -11,10 +11,13 @@ fn f(x: f64) -> f64 {
 pub fn main() {
     println!("solution_by_dichotomy: {x}", x=find_solution_by_dichotomy(0.1, 1.5));
     // answer: 1.114156723022461
+
     println!("solution_by_chords   : {x}", x=find_solution_by_chords(0.1, 1.5));
     // answer: 1.1141571408717854
+
     println!("solution_by_newton   : {x}", x=find_solution_by_newton(1.));
     // answer: 1.114157140871924
+
     println!("solution_by_direct_iterstions: {x}", x=find_solution_by_direct_iterations(1.));
     // answer: -2.772604525254792
 }
