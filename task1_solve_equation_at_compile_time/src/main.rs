@@ -1,4 +1,4 @@
-//! Solution of arbitrary equation in compile time.
+//! Solution of arbitrary equation at compile time.
 
 #![feature(
     const_cmp,
