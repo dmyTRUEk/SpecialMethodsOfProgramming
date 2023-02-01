@@ -1,4 +1,5 @@
-# Solutions of tasks for "Special Methods of Programming"
+# Solutions of tasks for "Special Methods of Programming" by D
+
 Variant №2.
 
 
