@@ -108,7 +108,8 @@ impl Polynomial {
     pub fn eval_derivative_at(&self, x: impl Into<Complex64>) -> Complex64 {
         let mut rng = thread_rng(); // TODO(optimization): don't create every time => move out of this functions => create it higher
         let dx = Complex64::new(rng.gen_range(-1. .. 1.), rng.gen_range(-1. .. 1.));
-        let dx = 1e-4 * dx / dx.norm();
+        const DELTA: f64 = 1e-4;
+        let dx = DELTA * dx / dx.norm();
         let x: Complex64 = x.into();
         (self.eval_at(x+dx) - self.eval_at(x-dx)) / (2. * dx)
     }
