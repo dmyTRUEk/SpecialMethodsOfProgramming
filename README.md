@@ -4,7 +4,9 @@
 
 
 ## Task 1: solve equation
-**Task**: find solution of equation: $\sin(x) - 1/x = 0$.
+**Task**: find solution of equation:
+
+$$ \sin(x) - 1/x = 0 .$$
 
 **Solution**: [here](./task1_solve_equation/src/main.rs).
 
@@ -29,7 +31,9 @@ by dichotomy: 1.114156723022461
 
 
 ## Task 2: solve polynomial equation
-**Task**: find all solutions of equation: $x^4 + 2x^3 + 7x^2 + 2x + 7 = 0$.
+**Task**: find all solutions of equation:
+
+$$ x^4 + 2x^3 + 7x^2 + 2x + 7 = 0 .$$
 
 **Solution**: [here](./task2_solve_polynomial_equation/src/main.rs).
 
@@ -48,7 +52,7 @@ with fixed precision of $10^{-3}$ in $x$ and $y$.
 
 Rosenbrock function:
 
-$$ f(x,y) = (1-x)^2 + 100 (y-x^2)^2 $$
+$$ f(x,y) = (1-x)^2 + 100 (y-x^2)^2 .$$
 
 **Solution**: [here](./task3_find_min_with_fixed_precision/src/main.rs).
 
@@ -63,7 +67,7 @@ by downhill   simplex: x = 0.9995644823869441 , y = 0.9991330575392396
 ## Task 4: find min of function
 **Task**: find min of function:
 
-$$ [1 + (x+y+1)^2 (19-14x+3x^2-14y+6xy+3y^2)] * [30 + (2x-3y)^2 (18-32x+12x^2+48y-36xy+27y^2)] $$
+$$ [1 + (x+y+1)^2 (19-14x+3x^2-14y+6xy+3y^2)] * [30 + (2x-3y)^2 (18-32x+12x^2+48y-36xy+27y^2)] .$$
 
 **Solution**: [here](./task4_find_min/src/main.rs).
 
