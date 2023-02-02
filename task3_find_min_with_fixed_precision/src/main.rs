@@ -63,11 +63,12 @@ fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
         p_n
     }
 
-    let solution = Vec2::new(SOLUTION.0, SOLUTION.1);
+    let solution_exact = Vec2::new(SOLUTION.0, SOLUTION.1);
 
     let mut point = point_start;
-    while (point.x - solution.x).abs() > PRECISION || (point.y - solution.y).abs() > PRECISION {
+    while !is_precise_enough(point, solution_exact) {
         point = find_min_along_x(point);
+        if is_precise_enough(point, solution_exact) { break; }
         point = find_min_along_y(point);
     }
     point
@@ -102,15 +103,21 @@ fn find_min_by_fastest_descent(point_start: Vec2) -> Vec2 {
         p_n
     }
 
-    let solution = Vec2::new(SOLUTION.0, SOLUTION.1);
+    let solution_exact = Vec2::new(SOLUTION.0, SOLUTION.1);
 
     let mut point = point_start;
-    while (point.x - solution.x).abs() > PRECISION || (point.y - solution.y).abs() > PRECISION {
+    while !is_precise_enough(point, solution_exact) {
         // println!("{}", point);
         // println!("x = {}\ny = {}\n", point.x, point.y);
         point = find_min_along_gradient(point);
     }
     point
+}
+
+
+fn is_precise_enough(solution_found: Vec2, solution_exact: Vec2) -> bool {
+    (solution_found.x - solution_exact.x).abs() < PRECISION &&
+        (solution_found.y - solution_exact.y).abs() < PRECISION
 }
 
 
