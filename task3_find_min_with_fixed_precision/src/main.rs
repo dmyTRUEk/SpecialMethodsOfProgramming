@@ -16,43 +16,44 @@ fn f(p: Vec2) -> f64 {
 
 
 fn main() {
-    println!("solution by coordinate descent: {}", find_min_by_coordinate_descent(Vec2::zeros()));
+    println!("solution by coordinate descent:");
+    println!("{}", find_min_by_coordinate_descent(Vec2::zero()));
     // answer: x = 0.9997922598100459 , y = 0.9995361936770234
 }
 
 
 fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
     const MAX_ITERATION: usize = 30;
-    const TOLERANCE: f64 = 10e-5;
-    const DELTA_FOR_DERIVATIVE: f64 = 10e-3;
+    const DERIVATIVE_TOLERANCE: f64 = 1e-4;
+    const DERIVATIVE_DELTA: f64 = 1e-2;
 
-    fn find_min_along_x(p: Vec2) -> Vec2 {
-        fn d(p: Vec2) -> f64 {
-            let mut delta = Vec2::zeros();
-            delta.x = DELTA_FOR_DERIVATIVE;
-            (f(p+delta) - f(p-delta)) / (2.*DELTA_FOR_DERIVATIVE)
+    fn find_min_along_x(point: Vec2) -> Vec2 {
+        fn derivative_along_x(p: Vec2) -> f64 {
+            let mut delta = Vec2::zero();
+            delta.x = DERIVATIVE_DELTA;
+            (f(p+delta) - f(p-delta)) / (2.*DERIVATIVE_DELTA)
         }
-        let mut p_n_m1 = p; // P_(n-1)
-        let mut p_n    = p; // P_n
+        let mut p_n_m1 = point; // P_(n-1)
+        let mut p_n    = point; // P_n
         for _ in 0..MAX_ITERATION {
-            p_n.x = p_n_m1.x - f(p_n_m1) / d(p_n_m1);
-            if (p_n.x - p_n_m1.x).abs() < TOLERANCE { return p_n; }
+            p_n.x = p_n_m1.x - f(p_n_m1) / derivative_along_x(p_n_m1);
+            if (p_n.x - p_n_m1.x).abs() < DERIVATIVE_TOLERANCE { return p_n; }
             p_n_m1 = p_n;
         }
         p_n
     }
 
-    fn find_min_along_y(p: Vec2) -> Vec2 {
-        fn d(p: Vec2) -> f64 {
-            let mut delta = Vec2::zeros();
-            delta.y = DELTA_FOR_DERIVATIVE;
-            (f(p+delta) - f(p-delta)) / (2.*DELTA_FOR_DERIVATIVE)
+    fn find_min_along_y(point: Vec2) -> Vec2 {
+        fn derivative_along_y(p: Vec2) -> f64 {
+            let mut delta = Vec2::zero();
+            delta.y = DERIVATIVE_DELTA;
+            (f(p+delta) - f(p-delta)) / (2.*DERIVATIVE_DELTA)
         }
-        let mut p_n_m1 = p; // P_(n-1)
-        let mut p_n    = p; // P_n
+        let mut p_n_m1 = point; // P_(n-1)
+        let mut p_n    = point; // P_n
         for _ in 0..MAX_ITERATION {
-            p_n.y = p_n_m1.y - f(p_n_m1) / d(p_n_m1);
-            if (p_n.y - p_n_m1.y).abs() < TOLERANCE { return p_n; }
+            p_n.y = p_n_m1.y - f(p_n_m1) / derivative_along_y(p_n_m1);
+            if (p_n.y - p_n_m1.y).abs() < DERIVATIVE_TOLERANCE { return p_n; }
             p_n_m1 = p_n;
         }
         p_n
@@ -66,5 +67,20 @@ fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
         point = find_min_along_y(point);
     }
     point
+}
+
+
+
+
+
+trait Vec2Exts {
+    fn zero() -> Self;
+    fn identity_along_x() -> Self;
+    fn identity_along_y() -> Self;
+}
+impl Vec2Exts for Vec2 {
+    fn zero()             -> Self { Vec2::new(0., 0.) }
+    fn identity_along_x() -> Self { Vec2::new(1., 0.) }
+    fn identity_along_y() -> Self { Vec2::new(0., 1.) }
 }
 
