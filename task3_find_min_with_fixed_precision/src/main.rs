@@ -19,6 +19,10 @@ fn main() {
     println!("solution by coordinate descent:");
     println!("{}", find_min_by_coordinate_descent(Vec2::zero()));
     // answer: x = 0.9997922598100459 , y = 0.9995361936770234
+
+    println!("solution by fastest descent:");
+    println!("{}", find_min_by_fastest_descent(Vec2::zero()));
+    // answer: x = 0.9995008705143117 , y = 0.9990000002451329
 }
 
 
@@ -65,6 +69,46 @@ fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
     while (point.x - solution.x).abs() > PRECISION || (point.y - solution.y).abs() > PRECISION {
         point = find_min_along_x(point);
         point = find_min_along_y(point);
+    }
+    point
+}
+
+
+fn find_min_by_fastest_descent(point_start: Vec2) -> Vec2 {
+    fn find_min_along_gradient(point: Vec2) -> Vec2 {
+        const MAX_ITERATION: usize = 10;
+        const DERIVATIVE_TOLERANCE: f64 = 1e-3;
+        const DERIVATIVE_DELTA: f64 = 1e-4;
+        const STEP_SCALE: f64 = 3e-3;
+
+        fn derivative_along_direction(p: Vec2, dir: Vec2) -> f64 {
+            let delta = dir.normalize() * DERIVATIVE_DELTA;
+            (f(p+delta) - f(p-delta)) / (2.*DERIVATIVE_DELTA)
+        }
+        fn grad(p: Vec2) -> Vec2 {
+            Vec2::new(
+                derivative_along_direction(p, Vec2::identity_along_x()),
+                derivative_along_direction(p, Vec2::identity_along_y()),
+            )
+        }
+        let grad_dir = grad(point);
+        let mut p_n_m1 = point; // P_(n-1)
+        let mut p_n    = point; // P_n
+        for _ in 0..MAX_ITERATION {
+            p_n = p_n_m1 - STEP_SCALE * grad_dir * f(p_n_m1) / derivative_along_direction(p_n_m1, grad_dir);
+            if (p_n - p_n_m1).norm_squared() < DERIVATIVE_TOLERANCE.powi(2) { return p_n; }
+            p_n_m1 = p_n;
+        }
+        p_n
+    }
+
+    let solution = Vec2::new(SOLUTION.0, SOLUTION.1);
+
+    let mut point = point_start;
+    while (point.x - solution.x).abs() > PRECISION || (point.y - solution.y).abs() > PRECISION {
+        // println!("{}", point);
+        // println!("x = {}\ny = {}\n", point.x, point.y);
+        point = find_min_along_gradient(point);
     }
     point
 }
