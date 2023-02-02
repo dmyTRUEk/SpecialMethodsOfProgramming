@@ -41,3 +41,14 @@ Answers:
 -1.0356447080166609 - 2.2144580135918535 i
 ```
 
+
+## Task 3
+Task: find min of Rosenbrock function with fixed precision.
+
+Solution: [here](./task3_find_min_with_fixed_precision/src/main.rs).
+
+Answers:
+```
+by coordinate descent: x = 0.9997922598100459 , y = 0.9995361936770234
+```
+
