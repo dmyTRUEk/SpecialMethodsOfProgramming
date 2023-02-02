@@ -18,7 +18,7 @@ pub fn main() {
     println!("solution_by_newton   : {x}", x=find_solution_by_newton(1.));
     // answer: 1.114157140871924
 
-    println!("solution_by_direct_iterstions: {x}", x=find_solution_by_direct_iterations(1.));
+    println!("solution_by_direct_iterations: {x}", x=find_solution_by_direct_iterations(1.));
     // answer: -2.772604525254792
 }
 
