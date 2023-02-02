@@ -3,7 +3,7 @@
 Variant №2.
 
 
-## Task 1
+## Task 1: solve equation
 Task: find solution of equation: $\sin(x) - 1/x = 0$.
 
 Solution: [here](./task1_solve_equation/src/main.rs).
@@ -17,7 +17,7 @@ by direct_iterations: -2.772604525254792
 ```
 
 
-## Task 1: flex
+## Task 1 flex: solve equation at compile time
 Task: solve "Task 1" at compile time.
 
 Solution: [here](./task1_solve_equation_at_compile_time/src/main.rs).
@@ -28,7 +28,7 @@ by dichotomy: 1.114156723022461
 ```
 
 
-## Task 2
+## Task 2: solve polynomial equation
 Task: find all solutions of equation: $x^4 + 2x^3 + 7x^2 + 2x + 7 = 0$.
 
 Solution: [here](./task2_solve_polynomial_equation/src/main.rs).
@@ -42,7 +42,7 @@ Answers:
 ```
 
 
-## Task 3
+## Task 3: find min of Rosenbrock function with fixed precision
 Task: find min of Rosenbrock function
 with fixed precision of $10^{-3}$ in $x$ and $y$.
 
