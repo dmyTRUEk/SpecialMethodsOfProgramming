@@ -164,8 +164,9 @@ fn find_min_by_downhill_simplex(point_start: Vec2) -> Vec2 {
 
 
 fn is_precise_enough(solution_found: Vec2, solution_exact: Vec2) -> bool {
-    (solution_found.x - solution_exact.x).abs() < PRECISION &&
-        (solution_found.y - solution_exact.y).abs() < PRECISION
+    (solution_found.x - solution_exact.x).abs() < PRECISION
+    &&
+    (solution_found.y - solution_exact.y).abs() < PRECISION
 }
 
 
