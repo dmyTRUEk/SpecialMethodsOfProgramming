@@ -6,7 +6,7 @@ use nalgebra::Vector2;
 type Vec2 = Vector2<f64>;
 
 
-const PRECISION: f64 = 10e-3;
+const PRECISION: f64 = 1e-3;
 const SOLUTION: (f64, f64) = (1., 1.);
 
 
