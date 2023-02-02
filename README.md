@@ -4,7 +4,7 @@ Variant №2.
 
 
 ## Task 1
-Task: find solution of equation: `sin(x) - 1/x = 0`.
+Task: find solution of equation: $\sin(x) - 1/x = 0$.
 
 Solution: [here](./task1_solve_equation/src/main.rs).
 
@@ -29,7 +29,7 @@ by dichotomy: 1.114156723022461
 
 
 ## Task 2
-Task: find all solutions of equation: `x⁴ + 2x³ + 7x² + 2x + 7 = 0`.
+Task: find all solutions of equation: $x^4 + 2x^3 + 7x^2 + 2x + 7 = 0$.
 
 Solution: [here](./task2_solve_polynomial_equation/src/main.rs).
 
@@ -43,7 +43,12 @@ Answers:
 
 
 ## Task 3
-Task: find min of Rosenbrock function with fixed precision.
+Task: find min of Rosenbrock function
+with fixed precision of $10^{-3}$ in $x$ and $y$.
+
+Rosenbrock function:
+
+$$ f(x,y) = (1-x)^2 + 100 (y-x^2)^2 $$
 
 Solution: [here](./task3_find_min_with_fixed_precision/src/main.rs).
 
