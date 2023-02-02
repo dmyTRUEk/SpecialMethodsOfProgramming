@@ -61,7 +61,7 @@ fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
     let solution = Vec2::new(SOLUTION.0, SOLUTION.1);
 
     let mut point = point_start;
-    while (point - solution).norm_squared() > PRECISION.powi(2) {
+    while (point.x - solution.x).abs() > PRECISION || (point.y - solution.y).abs() > PRECISION {
         point = find_min_along_x(point);
         point = find_min_along_y(point);
     }
