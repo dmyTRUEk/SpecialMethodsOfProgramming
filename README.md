@@ -10,10 +10,10 @@ Solution: [here](./task1_solve_equation/src/main.rs).
 
 Answers:
 ```
-solution_by_dichotomy: 1.114156723022461
-solution_by_chords   : 1.1141571408717854
-solution_by_newton   : 1.114157140871924
-solution_by_direct_iterations: -2.772604525254792
+by dichotomy: 1.114156723022461
+by chords   : 1.1141571408717854
+by newton   : 1.114157140871924
+by direct_iterations: -2.772604525254792
 ```
 
 
@@ -24,7 +24,7 @@ Solution: [here](./task1_solve_equation_at_compile_time/src/main.rs).
 
 Answer:
 ```
-X = 1.114156723022461
+by dichotomy: 1.114156723022461
 ```
 
 
