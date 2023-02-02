@@ -3,6 +3,7 @@
 use nalgebra::Vector2;
 
 
+// TODO(refactor): rename to `Vec2d`
 type Vec2 = Vector2<f64>;
 
 
