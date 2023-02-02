@@ -50,5 +50,6 @@ Solution: [here](./task3_find_min_with_fixed_precision/src/main.rs).
 Answers:
 ```
 by coordinate descent: x = 0.9997922598100459 , y = 0.9995361936770234
+by fastest    descent: x = 0.9995008705143117 , y = 0.9990000002451329
 ```
 
