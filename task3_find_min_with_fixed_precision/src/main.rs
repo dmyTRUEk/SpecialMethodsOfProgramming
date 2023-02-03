@@ -19,22 +19,24 @@ fn f(p: Vec2) -> f64 {
 
 
 fn main() {
+    let point_start = Vec2::new(-1.7, 1.7);
+
     println!("solution by coordinate descent:");
-    println!("{}", find_min_by_coordinate_descent(Vec2::zero()));
-    // answer: x = 0.9997922598100459 , y = 0.9995361936770234
+    println!("{}", find_min_by_coordinate_descent(point_start));
+    // answer: x = 0.9995093629951177 , y = 0.9990616715937082
 
     println!("solution by fastest descent:");
-    println!("{}", find_min_by_fastest_descent(Vec2::zero()));
-    // answer: x = 0.9995008705143117 , y = 0.9990000002451329
+    println!("{}", find_min_by_fastest_descent(point_start));
+    // answer: x = 1.0004988735118054 , y = 1.0009999995954986
 
     println!("solution by downhill simplex:");
-    println!("{}", find_min_by_downhill_simplex(Vec2::zero()));
-    // answer: x = 0.9995644823869441 , y = 0.9991330575392396
+    println!("{}", find_min_by_downhill_simplex(point_start));
+    // answer: x = 1.0004704501887318 , y = 1.000914952298626
 }
 
 
 fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
-    const MAX_ITERATION: usize = 30;
+    const MAX_ITERATION: usize = 20;
     const DERIVATIVE_TOLERANCE: f64 = 1e-4;
     const DERIVATIVE_DELTA: f64 = 1e-2;
 
@@ -87,7 +89,7 @@ fn find_min_by_fastest_descent(point_start: Vec2) -> Vec2 {
         const MAX_ITERATION: usize = 10;
         const DERIVATIVE_TOLERANCE: f64 = 1e-3;
         const DERIVATIVE_DELTA: f64 = 1e-4;
-        const STEP_SCALE: f64 = 3e-3;
+        const STEP_SCALE: f64 = 2e-3;
 
         fn derivative_along_direction(p: Vec2, dir: Vec2) -> f64 {
             let delta = dir.normalize() * DERIVATIVE_DELTA;

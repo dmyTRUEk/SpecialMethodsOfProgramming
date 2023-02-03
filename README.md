@@ -49,6 +49,7 @@ $$ x^4 + 2x^3 + 7x^2 + 2x + 7 = 0 .$$
 ## Task 3: find min of Rosenbrock function with fixed precision
 **Task:** find min of Rosenbrock function
 with fixed precision of $10^{-3}$ in $x$ and $y$.
+Initial point is $x=-1.7$, $y=1.7$.
 
 Rosenbrock function:
 
@@ -58,9 +59,9 @@ $$ f(x,y) = (1-x)^2 + 100 (y-x^2)^2 .$$
 
 **Answers:**
 ```
-by coordinate descent: x = 0.9997922598100459 , y = 0.9995361936770234
-by fastest    descent: x = 0.9995008705143117 , y = 0.9990000002451329
-by downhill   simplex: x = 0.9995644823869441 , y = 0.9991330575392396
+by coordinate descent: x = 0.9995093629951177 , y = 0.9990616715937082
+by fastest    descent: x = 1.0004988735118054 , y = 1.0009999995954986
+by downhill   simplex: x = 1.0004704501887318 , y = 1.000914952298626
 ```
 
 
