@@ -12,10 +12,10 @@ $$ \sin(x) - 1/x = 0 .$$
 
 **Answers:**
 ```
-by dichotomy   : 1.114156723022461
-by chords      : 1.1141571408717854
-by newton      : 1.114157140871924
-by direct iters: 1.1141570186671306
+by dichotomy   : x = 1.114156723022461  , f_evals = 36
+by chords      : x = 1.1141571408717854 , f_evals = 24
+by newton      : x = 1.114157140871924  , f_evals = 12
+by direct iters: x = 1.1141570186671306 , f_evals = 10
 ```
 
 
@@ -59,9 +59,9 @@ $$ f(x,y) = (1-x)^2 + 100 (y-x^2)^2 .$$
 
 **Answers:**
 ```
-by coordinate descent: x = 0.9995093629951177 , y = 0.9990616715937082 , iters = 13506
-by fastest    descent: x = 1.0004988735118054 , y = 1.0009999995954986 , iters = 6727068
-by downhill   simplex: x = 1.0004704501887318 , y = 1.000914952298626  , iters = 194
+by coordinate descent: x = 0.9995093629951177 , y = 0.9990616715937082 , f_evals = 13506
+by fastest    descent: x = 1.0004988735118054 , y = 1.0009999995954986 , f_evals = 6727068
+by downhill   simplex: x = 1.0004704501887318 , y = 1.000914952298626  , f_evals = 194
 ```
 
 

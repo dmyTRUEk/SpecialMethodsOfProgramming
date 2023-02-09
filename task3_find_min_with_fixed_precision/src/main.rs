@@ -21,16 +21,18 @@ fn f(p: Vec2) -> f64 {
 fn main() {
     let point_start = Vec2::new(-1.7, 1.7);
 
+    println!("solutions:");
+
     let (solution, f_evals) = find_min_by_coordinate_descent(point_start);
-    println!("solution by coordinate descent:       x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
+    println!("by coordinate descent      : x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
     // answer: x = 0.9995093629951177 , y = 0.9990616715937082 , f_evals = 13506
 
     let (solution, f_evals) = find_min_by_fastest_descent(point_start);
-    println!("solution by \"fastest\" descent:        x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
+    println!("by \"fastest\" descent       : x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
     // answer: x = 1.0004988735118054 , y = 1.0009999995954986 , f_evals = 6727068
 
     let (solution, f_evals) = find_min_by_downhill_simplex(point_start);
-    println!("solution by downhill simplex descent: x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
+    println!("by downhill simplex descent: x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
     // answer: x = 1.0004704501887318 , y = 1.000914952298626  , f_evals = 194
 }
 
