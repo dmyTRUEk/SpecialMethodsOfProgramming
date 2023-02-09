@@ -6,7 +6,7 @@
 ## Task 1: solve equation
 **Task:** find solution of equation:
 
-$$ \sin(x) - 1/x = 0 .$$
+$$ f(x) = \sin(x) - 1/x = 0 .$$
 
 **Solution:** [here](./task1_solve_equation/src/main.rs).
 
