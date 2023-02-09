@@ -116,8 +116,6 @@ fn find_min_by_fastest_descent(point_start: Vec2) -> Vec2 {
 
     let mut point = point_start;
     while !is_precise_enough(point, solution_exact) {
-        // println!("{}", point);
-        // println!("x = {}\ny = {}\n", point.x, point.y);
         point = find_min_along_gradient(point);
     }
     point
@@ -130,38 +128,57 @@ fn find_min_by_downhill_simplex(point_start: Vec2) -> Vec2 {
 
     let solution_exact = Vec2::new(SOLUTION.0, SOLUTION.1);
 
-    let mut points: [Vec2; 3] = [
+    let points: [Vec2; 3] = [
         point_start - INITIAL_SIMPLEX_SCALE*Vec2::identity_along_x(),
         point_start + INITIAL_SIMPLEX_SCALE*Vec2::identity_along_y(),
         point_start + INITIAL_SIMPLEX_SCALE*Vec2::new(1., -1.),
     ];
-    while !is_precise_enough(points.avg(), solution_exact) {
-        let (index_of_max, value_at_max) = points.index_and_value_of_max_by_key(f).unwrap();
-        let point_max = points[index_of_max];
+    let mut points: [(Vec2, f64); 3] = points.map(|p| (p, f(p)));
+    trait GetPoints<T, const N: usize> {
+        fn get_points(&self) -> [T; N];
+    }
+    impl GetPoints<Vec2, 3> for [(Vec2, f64); 3] {
+        fn get_points(&self) -> [Vec2; 3] {
+            self.map(|pv| pv.0)
+        }
+    }
+    trait GetValues<T, const N: usize> {
+        fn get_values(&self) -> [T; N];
+    }
+    impl GetValues<f64, 3> for [(Vec2, f64); 3] {
+        fn get_values(&self) -> [f64; 3] {
+            self.map(|pv| pv.1)
+        }
+    }
+    while !is_precise_enough(points.get_points().avg(), solution_exact) {
+        let index_of_max = points.get_values().index_of_max().unwrap();
+        let (point_max, value_at_max) = points[index_of_max];
+
         let other_points_indices = match index_of_max {
             0 => [1, 2],
             1 => [0, 2],
             2 => [0, 1],
             _ => unreachable!()
         };
-
-        let point_a = points[other_points_indices[0]];
-        let point_b = points[other_points_indices[1]];
+        let point_a = points[other_points_indices[0]].0;
+        let point_b = points[other_points_indices[1]].0;
 
         let point_symmetric = point_max.mirror_relative_to(point_a, point_b);
-        let value_at_point_symmetric = f(point_symmetric);
+        let value_at_symmetric = f(point_symmetric);
 
-        points[index_of_max] = match value_at_point_symmetric.partial_cmp(&value_at_max).unwrap() {
+        points[index_of_max] = match value_at_symmetric.partial_cmp(&value_at_max).unwrap() {
             Ordering::Less => {
-                point_symmetric
+                (point_symmetric, value_at_symmetric)
             }
             Ordering::Greater | Ordering::Equal => {
                 let point_ab = (point_a + point_b) / 2.;
-                point_max.lerp(&point_ab, LERP_T)
+                let point_lerp = point_max.lerp(&point_ab, LERP_T);
+                let value_at_lerp = f(point_lerp);
+                (point_lerp, value_at_lerp)
             }
         };
     }
-    points.avg()
+    points.get_points().avg()
 }
 
 
@@ -231,25 +248,6 @@ impl<T: PartialOrd, const N: usize> IndexOfMax for [T; N] {
                     }
                 }
                 Some(index_of_max)
-            }
-        }
-    }
-}
-
-trait IndexAndValueOfMaxByKey<T, R> {
-    /// Returns index of element with maximum value mapped by `f` and value of `f` at it.
-    fn index_and_value_of_max_by_key(self, f: fn(T) -> R) -> Option<(usize, R)>;
-}
-impl<T: Clone, R: PartialOrd + Clone, const N: usize> IndexAndValueOfMaxByKey<T, R> for [T; N] {
-    /// Returns index of element with maximum value mapped by `f` and value of `f` at it for fixed-size array.
-    fn index_and_value_of_max_by_key(self, f: fn(T) -> R) -> Option<(usize, R)> {
-        match self.len() {
-            0 => None,
-            1 => Some((0, f(self[0].clone()))),
-            _ => {
-                let array_mapped = self.map(f);
-                let index_of_max = array_mapped.index_of_max().unwrap();
-                Some((index_of_max, array_mapped[index_of_max].clone()))
             }
         }
     }
