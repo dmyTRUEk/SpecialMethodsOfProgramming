@@ -21,26 +21,26 @@ fn f(p: Vec2) -> f64 {
 fn main() {
     let point_start = Vec2::new(-1.7, 1.7);
 
-    println!("solution by coordinate descent:");
-    println!("{}", find_min_by_coordinate_descent(point_start));
-    // answer: x = 0.9995093629951177 , y = 0.9990616715937082
+    let (solution, f_evals) = find_min_by_coordinate_descent(point_start);
+    println!("solution by coordinate descent:       x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
+    // answer: x = 0.9995093629951177 , y = 0.9990616715937082 , f_evals = 13506
 
-    println!("solution by fastest descent:");
-    println!("{}", find_min_by_fastest_descent(point_start));
-    // answer: x = 1.0004988735118054 , y = 1.0009999995954986
+    let (solution, f_evals) = find_min_by_fastest_descent(point_start);
+    println!("solution by \"fastest\" descent:        x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
+    // answer: x = 1.0004988735118054 , y = 1.0009999995954986 , f_evals = 6727068
 
-    println!("solution by downhill simplex:");
-    println!("{}", find_min_by_downhill_simplex(point_start));
-    // answer: x = 1.0004704501887318 , y = 1.000914952298626
+    let (solution, f_evals) = find_min_by_downhill_simplex(point_start);
+    println!("solution by downhill simplex descent: x = {x}\ty = {y}\tf_evals = {fe}", x=solution.x, y=solution.y, fe=f_evals);
+    // answer: x = 1.0004704501887318 , y = 1.000914952298626  , f_evals = 194
 }
 
 
-fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
+fn find_min_by_coordinate_descent(point_start: Vec2) -> (Vec2, u64) {
     const MAX_ITERATION: usize = 20;
     const DERIVATIVE_TOLERANCE: f64 = 1e-4;
     const DERIVATIVE_DELTA: f64 = 1e-2;
 
-    fn find_min_along_x(point: Vec2, iters_counter: &mut u64) -> Vec2 {
+    fn find_min_along_x(point: Vec2, f_evals: &mut u64) -> Vec2 {
         fn derivative_along_x(p: Vec2) -> f64 {
             let mut delta = Vec2::zero();
             delta.x = DERIVATIVE_DELTA;
@@ -50,14 +50,14 @@ fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
         let mut p_n    = point; // P_n
         for _ in 0..MAX_ITERATION {
             p_n.x = p_n_m1.x - f(p_n_m1) / derivative_along_x(p_n_m1);
-            *iters_counter += 3;
+            *f_evals += 3;
             if (p_n.x - p_n_m1.x).abs() < DERIVATIVE_TOLERANCE { return p_n; }
             p_n_m1 = p_n;
         }
         p_n
     }
 
-    fn find_min_along_y(point: Vec2, iters_counter: &mut u64) -> Vec2 {
+    fn find_min_along_y(point: Vec2, f_evals: &mut u64) -> Vec2 {
         fn derivative_along_y(p: Vec2) -> f64 {
             let mut delta = Vec2::zero();
             delta.y = DERIVATIVE_DELTA;
@@ -67,7 +67,7 @@ fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
         let mut p_n    = point; // P_n
         for _ in 0..MAX_ITERATION {
             p_n.y = p_n_m1.y - f(p_n_m1) / derivative_along_y(p_n_m1);
-            *iters_counter += 3;
+            *f_evals += 3;
             if (p_n.y - p_n_m1.y).abs() < DERIVATIVE_TOLERANCE { return p_n; }
             p_n_m1 = p_n;
         }
@@ -76,20 +76,19 @@ fn find_min_by_coordinate_descent(point_start: Vec2) -> Vec2 {
 
     let solution_exact = Vec2::new(SOLUTION.0, SOLUTION.1);
 
-    let mut iters_counter: u64 = 0;
+    let mut f_evals: u64 = 0;
     let mut point = point_start;
     while !is_precise_enough(point, solution_exact) {
-        point = find_min_along_x(point, &mut iters_counter);
+        point = find_min_along_x(point, &mut f_evals);
         if is_precise_enough(point, solution_exact) { break; }
-        point = find_min_along_y(point, &mut iters_counter);
+        point = find_min_along_y(point, &mut f_evals);
     }
-    dbg!(iters_counter);
-    point
+    (point, f_evals)
 }
 
 
-fn find_min_by_fastest_descent(point_start: Vec2) -> Vec2 {
-    fn find_min_along_gradient(point: Vec2, iters_counter: &mut u64) -> Vec2 {
+fn find_min_by_fastest_descent(point_start: Vec2) -> (Vec2, u64) {
+    fn find_min_along_gradient(point: Vec2, f_evals: &mut u64) -> Vec2 {
         const MAX_ITERATION: usize = 10;
         const DERIVATIVE_TOLERANCE: f64 = 1e-3;
         const DERIVATIVE_DELTA: f64 = 1e-4;
@@ -110,7 +109,7 @@ fn find_min_by_fastest_descent(point_start: Vec2) -> Vec2 {
         let mut p_n    = point; // P_n
         for _ in 0..MAX_ITERATION {
             p_n = p_n_m1 - STEP_SCALE * grad_dir * f(p_n_m1) / derivative_along_direction(p_n_m1, grad_dir);
-            *iters_counter += 3;
+            *f_evals += 3;
             if (p_n - p_n_m1).norm_squared() < DERIVATIVE_TOLERANCE.powi(2) { return p_n; }
             p_n_m1 = p_n;
         }
@@ -119,22 +118,21 @@ fn find_min_by_fastest_descent(point_start: Vec2) -> Vec2 {
 
     let solution_exact = Vec2::new(SOLUTION.0, SOLUTION.1);
 
-    let mut iters_counter: u64 = 0;
+    let mut f_evals: u64 = 0;
     let mut point = point_start;
     while !is_precise_enough(point, solution_exact) {
-        point = find_min_along_gradient(point, &mut iters_counter);
+        point = find_min_along_gradient(point, &mut f_evals);
     }
-    dbg!(iters_counter);
-    point
+    (point, f_evals)
 }
 
 
-fn find_min_by_downhill_simplex(point_start: Vec2) -> Vec2 {
+fn find_min_by_downhill_simplex(point_start: Vec2) -> (Vec2, u64) {
     const INITIAL_SIMPLEX_SCALE: f64 = 2.0;
     const LERP_T: f64 = 0.5;
 
     let solution_exact = Vec2::new(SOLUTION.0, SOLUTION.1);
-    let mut iters_counter: u64 = 0;
+    let mut f_evals: u64 = 0;
 
     let points: [Vec2; 3] = [
         point_start - INITIAL_SIMPLEX_SCALE*Vec2::identity_along_x(),
@@ -142,7 +140,7 @@ fn find_min_by_downhill_simplex(point_start: Vec2) -> Vec2 {
         point_start + INITIAL_SIMPLEX_SCALE*Vec2::new(1., -1.),
     ];
     let mut points: [(Vec2, f64); 3] = points.map(|p| (p, f(p)));
-    iters_counter += 3;
+    f_evals += 3;
     trait GetPoints<T, const N: usize> {
         fn get_points(&self) -> [T; N];
     }
@@ -174,7 +172,7 @@ fn find_min_by_downhill_simplex(point_start: Vec2) -> Vec2 {
 
         let point_symmetric = point_max.mirror_relative_to(point_a, point_b);
         let value_at_symmetric = f(point_symmetric);
-        iters_counter += 1;
+        f_evals += 1;
 
         points[index_of_max] = match value_at_symmetric.partial_cmp(&value_at_max).unwrap() {
             Ordering::Less => {
@@ -184,13 +182,12 @@ fn find_min_by_downhill_simplex(point_start: Vec2) -> Vec2 {
                 let point_ab = (point_a + point_b) / 2.;
                 let point_lerp = point_max.lerp(&point_ab, LERP_T);
                 let value_at_lerp = f(point_lerp);
-                iters_counter += 1;
+                f_evals += 1;
                 (point_lerp, value_at_lerp)
             }
         };
     }
-    dbg!(iters_counter);
-    points.get_points().avg()
+    (points.get_points().avg(), f_evals)
 }
 
 
