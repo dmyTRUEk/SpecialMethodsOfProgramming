@@ -60,7 +60,7 @@ $$ f(x,y) = (1-x)^2 + 100 (y-x^2)^2 .$$
 **Answers:**
 ```
 by coordinate descent: x = 0.9995093629951177 , y = 0.9990616715937082 , f_evals = 13506
-by fastest    descent: x = 1.0004988735118054 , y = 1.0009999995954986 , f_evals = 6727068
+by "fastest"  descent: x = 1.0004988735118054 , y = 1.0009999995954986 , f_evals = 6727068
 by downhill   simplex: x = 1.0004704501887318 , y = 1.000914952298626  , f_evals = 194
 ```
 
