@@ -30,17 +30,18 @@ fn find_solution_by_dichotomy(l: f64, r: f64) -> f64 {
     let m = (l + r) / 2.;
     if f(m).abs() < TOLERANCE { return m; }
     match f(m).partial_cmp(&0.) {
-        Some(Ordering::Less)    => { find_solution_by_dichotomy(m, r) }
-        Some(Ordering::Greater) => { find_solution_by_dichotomy(l, m) }
+        Some(Ordering::Greater) => { find_solution_by_dichotomy(l, m, iters_counter) }
+        Some(Ordering::Less)    => { find_solution_by_dichotomy(m, r, iters_counter) }
         _ => { panic!() }
     }
 }
 
 fn find_solution_by_chords(x0: f64, x1: f64) -> f64 {
+    const MAX_ITERS: u32 = 30;
     let mut x_n_m2 = x0; // X_(n-2)
     let mut x_n_m1 = x1; // X_(n-1)
     let mut x_n    = 0.; // X_n
-    for _ in 0..30 {
+    for _ in 0..MAX_ITERS {
         x_n = x_n_m1 - f(x_n_m1) * (x_n_m1 - x_n_m2) / (f(x_n_m1) - f(x_n_m2));
         if (x_n - x_n_m1).abs() < TOLERANCE { return x_n; }
         x_n_m2 = x_n_m1;
@@ -50,13 +51,14 @@ fn find_solution_by_chords(x0: f64, x1: f64) -> f64 {
 }
 
 fn find_solution_by_newton(x: f64) -> f64 {
+    const MAX_ITERS: u32 = 30;
     let mut x_n_m1 = x;  // X_(n-1)
     let mut x_n    = 0.; // X_n
     fn d(x: f64) -> f64 {
         const DELTA: f64 = 1e-3;
         (f(x+DELTA) - f(x-DELTA)) / (2.*DELTA)
     }
-    for _ in 0..30 {
+    for _ in 0..MAX_ITERS {
         x_n = x_n_m1 - f(x_n_m1) / d(x_n_m1);
         if (x_n - x_n_m1).abs() < TOLERANCE { return x_n; }
         x_n_m1 = x_n;
@@ -65,9 +67,10 @@ fn find_solution_by_newton(x: f64) -> f64 {
 }
 
 fn find_solution_by_direct_iterations(x: f64) -> f64 {
+    const MAX_ITERS: u32 = 1000;
     let mut x_prev = f64::NAN;
     let mut x = x;
-    for _ in 0..1000 {
+    for _ in 0..MAX_ITERS {
         x = -f(x) + x;
         if (x - x_prev).abs() < TOLERANCE { return x; }
         x_prev = x;
