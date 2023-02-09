@@ -12,10 +12,10 @@ $$ \sin(x) - 1/x = 0 .$$
 
 **Answers:**
 ```
-by dichotomy: 1.114156723022461
-by chords   : 1.1141571408717854
-by newton   : 1.114157140871924
-by direct_iterations: -2.772604525254792
+by dichotomy   : 1.114156723022461
+by chords      : 1.1141571408717854
+by newton      : 1.114157140871924
+by direct iters: 1.1141570186671306
 ```
 
 

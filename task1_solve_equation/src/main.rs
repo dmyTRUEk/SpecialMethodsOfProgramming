@@ -9,17 +9,17 @@ fn f(x: f64) -> f64 {
 
 
 pub fn main() {
-    println!("solution_by_dichotomy: {x}", x=find_solution_by_dichotomy(0.1, 1.5));
+    println!("solution_by_dichotomy   : {x}", x=find_solution_by_dichotomy(0.1, 1.5));
     // answer: 1.114156723022461
 
-    println!("solution_by_chords   : {x}", x=find_solution_by_chords(0.1, 1.5));
+    println!("solution_by_chords      : {x}", x=find_solution_by_chords(0.1, 1.5));
     // answer: 1.1141571408717854
 
-    println!("solution_by_newton   : {x}", x=find_solution_by_newton(1.));
+    println!("solution_by_newton      : {x}", x=find_solution_by_newton(1.));
     // answer: 1.114157140871924
 
-    println!("solution_by_direct_iterations: {x}", x=find_solution_by_direct_iterations(1.));
-    // answer: -2.772604525254792
+    println!("solution_by_direct_iters: {x}", x=find_solution_by_direct_iterations(1.));
+    // answer: 1.1141570186671306
 }
 
 
@@ -68,7 +68,7 @@ fn find_solution_by_direct_iterations(x: f64) -> f64 {
     let mut x_prev = f64::NAN;
     let mut x = x;
     for _ in 0..1000 {
-        x = f(x) + x;
+        x = -f(x) + x;
         if (x - x_prev).abs() < TOLERANCE { return x; }
         x_prev = x;
     }
