@@ -77,3 +77,92 @@ $$ [1 + (x+y+1)^2 (19-14x+3x^2-14y+6xy+3y^2)] * [30 + (2x-3y)^2 (18-32x+12x^2+48
 by downhill simplex: x = -0.0004520396141742822 , y = -1.0000038171601773
 ```
 
+
+# Task 5: Fit data
+**Task:** Fit data given in files with some function, find parameters and fit residue.
+
+Functional used as calculate fit residue:
+
+$$ res(f) = \sum_{n=1}^{N} (f(x_n) - y_n)^2 .$$
+
+Algorithm used to minimize fit residue function:
+[Pattern search (Hooke-Jeeves method)](https://en.wikipedia.org/wiki/Pattern_search_(optimization)).
+
+Program algorithm:
+- Basic version (fit points by given function):
+  1. Build function from string (e.g. $f(x)=ax+b$, where $a=1, b=2$).
+  2. Setup parameters for pattern search: $\alpha=2.0$, $\beta=1/\alpha$.
+  3. Minimize fit residue using pattern search (change parameters).
+- Advanced version (automatically build function to fit points by):
+  1. Generate random function with given constraints: function complexity, number of parameters, etc.
+  2. Fit data by this function.
+  3. If residue is less than residue of best function — set this as best.
+  4. Repeat forever.
+
+**Solution:** [here](./task5_fit_data/src/main.rs).
+
+## Task 5.1
+### Intended fit:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.1_fit1.png)
+### Better fit:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.1_fit2.png)
+### Fun fit:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.1_fit3.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.1_fit3_zoomed_out.png)
+
+## Task 5.3
+### Intended fit:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.3_fit1.png)
+### Better fits:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.3_fit2.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.3_fit3.png)
+
+## Task 5.4
+### Intended fit:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.4_fit1.png)
+### Alternative fits:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.4_fit2.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/98af786dc33844f3a2779a162cfc4694a2a3d4b6/SMoPD_task5.4_fit3.png)
+
+## Task 5.fun
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit1.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit2.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit3.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit4.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit5.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit6.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit7.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit8.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit9.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit10.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit11.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit12.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit13.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit14.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit15.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit16.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit17.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit18.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit19.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit20.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit21.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit22.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit23.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit24.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit25.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit26.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit27.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit28.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit29.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit30.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit31.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit32.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit33.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit34.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit35.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit36.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit37.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit38.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit39.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit40.png)
+
