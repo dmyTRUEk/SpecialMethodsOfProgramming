@@ -177,10 +177,13 @@ impl Function {
                     POWER if brackets_level == 0 => {
                         let lhs = box Self::from_str(&string[..i]).unwrap();
                         let rhs = box Self::from_str(&string[i+1..]).unwrap();
-                        if *rhs == (Function::Const { value: 2. }) {
-                            return Ok(Self::Sq { value: lhs });
-                        }
-                        return Ok(Self::Pow { lhs, rhs });
+                        return Ok(
+                            if *rhs == (Function::Const { value: 2. }) {
+                                Self::Sq { value: lhs }
+                            } else {
+                                Self::Pow { lhs, rhs }
+                            }
+                        );
                     }
                     _ => {}
                 }
@@ -433,10 +436,12 @@ impl Function {
 
     pub fn get_params_names(&self) -> Vec<ParamName> {
         match self {
-            Self::X => vec![],
-            Self::Const { .. } => vec![],
-            Self::Zero => vec![],
-            Self::One  => vec![],
+            Self::X
+            | Self::Const { .. }
+            | Self::Zero
+            | Self::One
+            => vec![],
+
             Self::Param { name } => vec![*name],
 
             Self::Neg { value }

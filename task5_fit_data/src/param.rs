@@ -6,7 +6,7 @@ use crate::{extensions::ExtGenFromArray, float_type::float};
 
 
 pub type ParamName = char;
-pub type ParamValue = float;
+pub type ParamValue = float; // use `ParamValue` instead of `float` where needed.
 
 
 pub const PARAMETER_NAMES: [ParamName; 20] = [
