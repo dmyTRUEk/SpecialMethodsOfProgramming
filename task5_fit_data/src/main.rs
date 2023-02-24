@@ -77,7 +77,7 @@ fn main() {
         f = f.simplify();
         if f.params.len() > FUNCTION_MAX_PARAMS {
             // println!("too many params in generated function, skipping");
-            continue
+            continue;
         }
         // println!("f = {}", f.to_string());
         // println!("fitting...");

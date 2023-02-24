@@ -36,7 +36,9 @@ impl ImplParams for Params {
         let mut params_names = f.get_params_names();
         params_names.sort();
         params_names.dedup();
-        let params = params_names.into_iter().map(|name| Param::gen_value(name)).collect();
+        let params = params_names.into_iter()
+            .map(|name| Param::gen_value(name))
+            .collect();
         params
     }
 

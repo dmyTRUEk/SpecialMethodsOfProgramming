@@ -83,7 +83,7 @@ impl Function {
                 }
                 if brackets_level == 0 {
                     is_first_lb_corresponds_to_last_rb = false;
-                    break
+                    break;
                 }
             }
             if is_first_lb_corresponds_to_last_rb {
@@ -178,7 +178,7 @@ impl Function {
                         let lhs = box Self::from_str(&string[..i]).unwrap();
                         let rhs = box Self::from_str(&string[i+1..]).unwrap();
                         if *rhs == (Function::Const { value: 2. }) {
-                            return Ok(Self::Sq { value: lhs })
+                            return Ok(Self::Sq { value: lhs });
                         }
                         return Ok(Self::Pow { lhs, rhs });
                     }
@@ -190,7 +190,7 @@ impl Function {
             if string == "x" { return Ok(Function::X) }
             let first_char: char = string.chars().next().unwrap();
             if len == 1 && PARAMETER_NAMES.contains(&first_char) {
-                return Ok(Function::Param { name: first_char })
+                return Ok(Function::Param { name: first_char });
             }
             if string == "0" { return Ok(Function::Zero) }
             if string == "1" { return Ok(Function::One) }
@@ -286,7 +286,7 @@ impl Function {
                     r += params.get(PARAMETER_NAMES[i]) * x.powi(i as i32);
                 }
                 r
-            },
+            }
             Self::BtrPolynomial { degree } => {
                 let mut r: float = 0.;
                 let mut denominator: float = 1.;
@@ -297,7 +297,7 @@ impl Function {
                     r += params.get(PARAMETER_NAMES[i]) * x.powi(i as i32) / denominator;
                 }
                 r
-            },
+            }
         };
         if DEBUG {
             println!("Function::eval: f(x) = {}\tx={}\t{:?}", self.to_string(), x, params);
@@ -385,7 +385,7 @@ impl Function {
                     children.extend(gen_token_list(lhs, x, p));
                     children.extend(gen_token_list(rhs, x, p));
                     children.push(Token::Operator(Operator::RightBracket));
-                },
+                }
                 _ => todo!()
             };
             enum TraversalType {
@@ -625,27 +625,33 @@ impl ToString for Function {
             Self::Div { lhs, rhs } => format!("({} / {})", lhs.to_string(), rhs.to_string()),
             Self::Pow { lhs, rhs } => format!("({})^{{{}}}", lhs.to_string(), rhs.to_string()),
 
-            Self::Polynomial { degree } => (0..=*degree).map(|i| format!(
-                    "{}{}",
-                    PARAMETER_NAMES[i],
-                    match i {
-                        0 => String::new(),
-                        1 => String::from("x"),
-                        _ => format!("x^{}", i),
-                    }
-                ))
+            Self::Polynomial { degree } => (0..=*degree)
+                .map(|i| {
+                    format!(
+                        "{}{}",
+                        PARAMETER_NAMES[i],
+                        match i {
+                            0 => String::new(),
+                            1 => String::from("x"),
+                            _ => format!("x^{}", i),
+                        }
+                    )
+                })
                 .reduce(|acc, el| format!("{} + {}", acc, el))
                 .unwrap(),
-            Self::BtrPolynomial { degree } => (0..=*degree).map(|i| format!(
-                    "{}{}/{}!",
-                    PARAMETER_NAMES[i],
-                    match i {
-                        0 => String::new(),
-                        1 => String::from("x"),
-                        _ => format!("x^{}", i),
-                    },
-                    i
-                ))
+            Self::BtrPolynomial { degree } => (0..=*degree)
+                .map(|i| {
+                    format!(
+                        "{}{}/{}!",
+                        PARAMETER_NAMES[i],
+                        match i {
+                            0 => String::new(),
+                            1 => String::from("x"),
+                            _ => format!("x^{}", i),
+                        },
+                        i
+                    )
+                })
                 .reduce(|acc, el| format!("{} + {}", acc, el))
                 .unwrap(),
         }
@@ -1287,10 +1293,7 @@ mod tests {
             assert_eq!(
                 2.5,
                 Function::from_str("x").unwrap()
-                .eval(
-                    2.5,
-                    &Params::empty()
-                ),
+                    .eval(2.5, &Params::empty()),
             );
         }
         #[test]
@@ -1298,10 +1301,7 @@ mod tests {
             assert_eq!(
                 11.479758672104968,
                 Function::from_str("x + 2*a*(x+1)^2 - sin(x+1) + exp(3*x)/exp(x)").unwrap()
-                .eval(
-                    1.,
-                    &Params::from_array([ ('a', 0.5) ])
-                ),
+                    .eval(1., &Params::from_array([('a', 0.5)])),
             );
         }
     }

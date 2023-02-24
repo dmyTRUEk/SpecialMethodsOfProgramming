@@ -32,12 +32,8 @@ type FitResult = Result<(float, u32), String>;
 /// Returns fit residue and iters it finished in.
 pub fn fit(f: &mut FunctionAndParams, points: &Points) -> FitResult {
     match FIT_ALGORITHM_TYPE {
-        FitAlgorithmType::PatternSearch => {
-            fit_by_pattern_search_algorithm(f, points)
-        }
-        FitAlgorithmType::DonwhillSimplex => {
-            fit_by_downhill_simplex_algorithm(f, points)
-        }
+        FitAlgorithmType::PatternSearch => fit_by_pattern_search_algorithm(f, points),
+        FitAlgorithmType::DonwhillSimplex => fit_by_downhill_simplex_algorithm(f, points),
     }
 }
 
@@ -62,7 +58,7 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
             if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
             if !res_at_current_params.is_finite() { return Err(format!("`res_at_current_params` isn't finite")) }
 
-            let mut residues_at_shifted_params = Vec::<float>::with_capacity(2*f.params.len());
+            let mut residues_at_shifted_params = Vec::<float>::with_capacity(2 * f.params.len());
             // if res_at_shifted_params.iter().any(|r| !r.is_finite()) { return Err(format!("one of `res_at_shifted_params` isn't finite")) }
 
             for i in 0..f.params.len() {
@@ -75,20 +71,14 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
                     // if !new_param_value.is_finite() { return Err(format!("`param.value + delta` isn't finite")) }
                     if !new_param_value.is_finite() {
                         residues_at_shifted_params.push(float::NAN);
-                        continue
+                        continue;
                     }
                     params.set(param.name, new_param_value);
                     let res = f.calc_fit_residue_with_params(&params, points);
-                    residues_at_shifted_params.push(
-                        if res.is_finite() {
-                            res
-                        } else {
-                            float::NAN
-                        }
-                    );
+                    residues_at_shifted_params.push(if res.is_finite() { res } else { float::NAN });
                 }
             }
-            assert_eq!(2*f.params.len(), residues_at_shifted_params.len());
+            assert_eq!(2 * f.params.len(), residues_at_shifted_params.len());
             if DEBUG { println!("res_at_shifted_params = {:?}", residues_at_shifted_params) }
 
             match residues_at_shifted_params.index_of_min_with_ceil(res_at_current_params) {
@@ -98,7 +88,7 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
                 }
                 Some(index_of_min) => {
                     if DEBUG { println!("INCREASE STEP") }
-                    let param_name = f.params[index_of_min/2].name;
+                    let param_name = f.params[index_of_min / 2].name;
                     let delta = if index_of_min % 2 == 0 { step } else { -step };
                     f.params.change_param_by(param_name, delta);
                     step *= ALPHA;
@@ -136,7 +126,7 @@ mod tests {
 
     use rand::{thread_rng, Rng};
 
-    use crate::{function::Function, param::Param, point::Point, params::Params};
+    use crate::{function::Function, param::Param, params::Params, point::Point};
 
     const TOLERANCE: float = 1e-3;
 
