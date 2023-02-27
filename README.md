@@ -121,8 +121,10 @@ Program algorithm:
 ### Intended fit:
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.4_fit1.png)
 ### Alternative fits:
-![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.4_fit2.png)
-![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/98af786dc33844f3a2779a162cfc4694a2a3d4b6/SMoPD_task5.4_fit3.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/cfb9e135b18ec9b8ff2ba02e6a87f8f2878a21a0/SMoPD_task5.4_fit2.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/cfb9e135b18ec9b8ff2ba02e6a87f8f2878a21a0/SMoPD_task5.4_fit3.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/cfb9e135b18ec9b8ff2ba02e6a87f8f2878a21a0/SMoPD_task5.4_fit4.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/cfb9e135b18ec9b8ff2ba02e6a87f8f2878a21a0/SMoPD_task5.4_fit5.png)
 
 ## Task 5.fun
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit1.png)
