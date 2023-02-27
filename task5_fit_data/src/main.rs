@@ -55,7 +55,7 @@ fn main() {
     let mut funcs_fitted: u64 = 0;
     let time_begin = Instant::now();
     loop {
-        // if funcs_fitted >= 100_000 {
+        // if funcs_fitted >= 1_000 {
         //     print_stats(funcs_generated, funcs_fitted, time_begin);
         //     return
         // }

@@ -11,10 +11,16 @@ use crate::{float_type::float, point::Point};
 pub type Points = Vec<Point>;
 
 pub trait ImplPoints {
-    fn load_from_file(filename: &str) -> Self;
     fn from_array<const N: usize>(array: [(float, float); N]) -> Self;
+    fn load_from_file(filename: &str) -> Self;
 }
 impl ImplPoints for Points {
+    fn from_array<const N: usize>(array: [(float, float); N]) -> Self {
+        array.into_iter()
+            .map(|(x, y)| Point::new(x, y))
+            .collect()
+    }
+
     fn load_from_file(filename: &str) -> Self {
         let file = BufReader::new(File::open(filename).expect(&format!("can't open file `{}`", filename)));
         let mut points: Points = vec![];
@@ -32,12 +38,6 @@ impl ImplPoints for Points {
             points.push(point);
         }
         points
-    }
-
-    fn from_array<const N: usize>(array: [(float, float); N]) -> Self {
-        array.into_iter()
-            .map(|(x, y)| Point::new(x, y))
-            .collect()
     }
 }
 

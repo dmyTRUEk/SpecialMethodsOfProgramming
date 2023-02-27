@@ -257,6 +257,7 @@ impl Function {
 
 
     // #[inline(always)]
+    // TODO(optimize)?: `pub const fn`
     pub fn eval(&self, x: float, params: &Params) -> float {
         const DEBUG: bool = false;
         let result = match self {

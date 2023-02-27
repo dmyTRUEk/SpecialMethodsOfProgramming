@@ -17,7 +17,7 @@ pub struct FunctionAndParams {
 }
 
 impl FunctionAndParams {
-    pub fn new(f: Function, params: Params) -> Self {
+    pub const fn new(f: Function, params: Params) -> Self {
         Self { f, params }
     }
 

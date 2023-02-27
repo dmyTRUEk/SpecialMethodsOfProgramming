@@ -59,14 +59,13 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
             if !res_at_current_params.is_finite() { return Err(format!("`res_at_current_params` isn't finite")) }
 
             let mut residues_at_shifted_params = Vec::<float>::with_capacity(2 * f.params.len());
-            // if res_at_shifted_params.iter().any(|r| !r.is_finite()) { return Err(format!("one of `res_at_shifted_params` isn't finite")) }
 
             for i in 0..f.params.len() {
                 let param = f.params[i].clone();
                 // TODO(optimize)?: try mutating self.
                 let mut params = f.params.clone();
                 // TODO(optimize)?: unroll for loop by hands.
-                for delta in [step, -step] {
+                for delta in [-step, step] {
                     let new_param_value = param.value + delta;
                     // if !new_param_value.is_finite() { return Err(format!("`param.value + delta` isn't finite")) }
                     if !new_param_value.is_finite() {
@@ -78,8 +77,9 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
                     residues_at_shifted_params.push(if res.is_finite() { res } else { float::NAN });
                 }
             }
-            assert_eq!(2 * f.params.len(), residues_at_shifted_params.len());
             if DEBUG { println!("res_at_shifted_params = {:?}", residues_at_shifted_params) }
+            assert_eq!(2 * f.params.len(), residues_at_shifted_params.len());
+            // if res_at_shifted_params.iter().any(|r| !r.is_finite()) { return Err(format!("one of `res_at_shifted_params` isn't finite")) }
 
             match residues_at_shifted_params.index_of_min_with_ceil(res_at_current_params) {
                 None => {
@@ -89,7 +89,7 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
                 Some(index_of_min) => {
                     if DEBUG { println!("INCREASE STEP") }
                     let param_name = f.params[index_of_min / 2].name;
-                    let delta = if index_of_min % 2 == 0 { step } else { -step };
+                    let delta = if index_of_min % 2 == 0 { -step } else { step };
                     f.params.change_param_by(param_name, delta);
                     step *= ALPHA;
                 }
