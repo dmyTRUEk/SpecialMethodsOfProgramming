@@ -45,13 +45,11 @@ impl Param {
     }
 
     pub fn gen_random_name() -> ParamName {
-        let mut rng = thread_rng();
-        rng.gen_from_array(PARAMETER_NAMES)
+        thread_rng().gen_from_array(PARAMETER_NAMES)
     }
 
     pub fn gen_random_value() -> ParamValue {
-        let mut rng = thread_rng();
-        rng.gen_range(PARAM_VALUE_MIN ..= PARAM_VALUE_MAX)
+        thread_rng().gen_range(PARAM_VALUE_MIN ..= PARAM_VALUE_MAX)
     }
 }
 
