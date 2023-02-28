@@ -22,8 +22,7 @@ use crate::{
     float_type::float,
     function::Function,
     function_and_params::{FunctionAndParams, ToStringForPlot},
-    param::Param,
-    params::{ImplParams, Params},
+    params::Params,
     points::{ImplPoints, Points},
 };
 
@@ -42,7 +41,8 @@ pub const PARAM_VALUE_MAX: float =  5.;
 const FILENAME: &str = "./data/fit_Dm_4.dat";
 
 const FIT_RESIDUE_THRESHOLD: float = float::INFINITY;
-const FUNCTION_MAX_PARAMS: usize = 7;
+const FUNCTION_PARAMS_AMOUNT_MIN: usize = 1;
+const FUNCTION_PARAMS_AMOUNT_MAX: usize = 7;
 
 
 fn main() {
@@ -55,7 +55,7 @@ fn main() {
     let points = Points::load_from_file(FILENAME);
 
     let mut rng = thread_rng();
-    let mut best_f_and_res: (FunctionAndParams, float) = (FunctionAndParams::gen_from_f(Function::X), FIT_RESIDUE_THRESHOLD);
+    let mut best_f_and_res: (FunctionAndParams, float) = (FunctionAndParams::gen_random_params_from_function(Function::X), FIT_RESIDUE_THRESHOLD);
     let mut funcs_generated: u64 = 0;
     let mut funcs_fitted: u64 = 0;
     let time_begin = Instant::now();
@@ -75,20 +75,30 @@ fn main() {
         funcs_generated += 1;
 
         let mut f = if CUSTOM_FUNCTION_FIT {
-            FunctionAndParams::gen_from_f(
-                Function::from_str("(((a * (b + cos(x * c - d))) / (g + sin((h * x - i)^2))))^2").unwrap()
+            FunctionAndParams::gen_random_params_from_function_and_some_params(
+                Function::from_str("(tan(a - (exp((b*x+i) * (c - sin(x))))^(d - cos(cos(h*x+g)))))^2").unwrap(),
                 // a b c d g h i
+                Params::from_array([
+                    ('a', -8.0897832478892900),
+                    ('b',  0.1577825221898550),
+                    ('c', -1.8801382154778565),
+                    ('d',  1.2566549816649228),
+                    ('g', -1.2261250730153570),
+                    ('h', -1.3636558727828500),
+                    ('i',  0.6369819759696052),
+                ])
             )
         } else {
             let complexity: u32 = rng.gen_range(10 ..= 30);
-            let mut f = FunctionAndParams::gen(complexity);
+            let mut f = FunctionAndParams::gen_random_function_and_params(complexity);
+            // println!("f = {}", f.to_string());
+            f = f.simplify();
             // println!("f = {}", f.to_string());
             f
         };
 
-        f = f.simplify();
-        if f.params.len() > FUNCTION_MAX_PARAMS {
-            if CUSTOM_FUNCTION_FIT { panic!("too many params in function, exiting") }
+        if !(FUNCTION_PARAMS_AMOUNT_MIN ..= FUNCTION_PARAMS_AMOUNT_MAX).contains(&f.params.amount()) {
+            if CUSTOM_FUNCTION_FIT { panic!("not enough or too many params in function") }
             // println!("too many params in generated function, skipping");
             continue;
         }
@@ -96,7 +106,7 @@ fn main() {
         // println!("fitting...");
         let fit_results = fit(&mut f, &points);
         // println!("fit_residue = {:?}", fit_results);
-        // println!();
+        // press_enter_to_continue();
         if fit_results.is_err() { continue }
         let (fit_residue, fit_iters) = fit_results.unwrap();
         funcs_fitted += 1;
@@ -222,11 +232,11 @@ fn benchmark_fit() {
     let points = Points::load_from_file(FILENAME);
     // println!("{:#?}", points);
 
-    let params = vec![
-        Param::new('f', -1.),
-        Param::new('q', -1.),
-        Param::new('w', -1.),
-    ];
+    let params = Params::from_array([
+        ('f', -1.),
+        ('q', -1.),
+        ('w', -1.),
+    ]);
     let mut f = FunctionAndParams::new(
         Function::from_str("((exp(x) / x)^(w))^(q) * (x * f)").unwrap(),
         // Function::Mul {

@@ -5,7 +5,8 @@ use crate::{
     fit::ResidualFunctionType,
     float_type::float,
     function::Function,
-    params::{ImplParams, Params},
+    param::Param,
+    params::Params,
     points::Points,
 };
 
@@ -16,19 +17,31 @@ pub struct FunctionAndParams {
     pub params: Params,
 }
 
+#[allow(dead_code)]
 impl FunctionAndParams {
     pub const fn new(f: Function, params: Params) -> Self {
         Self { f, params }
     }
 
-    pub fn gen_from_f(f: Function) -> Self {
+    pub fn gen_random_params_from_function(f: Function) -> Self {
         let params = Params::gen_random_from_f(&f);
         Self::new(f, params)
     }
 
-    pub fn gen(complexity: u32) -> Self {
+    pub fn gen_random_function_and_params(complexity: u32) -> Self {
         let f = Function::gen(complexity);
-        Self::gen_from_f(f)
+        Self::gen_random_params_from_function(f)
+    }
+
+    pub fn gen_random_params_from_function_and_some_params(f: Function, params: Params) -> Self {
+        let mut params = params;
+        let all_params_names = f.get_params_names();
+        for name in all_params_names {
+            if params.get_by_name_checked(name).is_none() {
+                params.insert(Param::gen_random_value_with_name(name));
+            }
+        }
+        Self::new(f, params)
     }
 
     // pub fn get_f(&self) -> Function {
@@ -98,7 +111,7 @@ impl FunctionAndParams {
 
     pub fn simplify(self) -> Self {
         let new_f = self.f.simplify();
-        // TODO: don't randomize params' values, bc this is pretty annoying sideeffect.
+        // TODO(check if done): don't randomize params' values, bc this is pretty annoying sideeffect.
         Self::new(new_f, self.params)
     }
 }
@@ -106,7 +119,7 @@ impl FunctionAndParams {
 impl ToString for FunctionAndParams {
     fn to_string(&self) -> String {
         let f_to_string = self.f_to_string();
-        let params_str = self.params.iter()
+        let params_str = self.params.get_all().iter()
             .map(|p| format!("{n} = {v}", n=p.name, v=p.value))
             .reduce(|acc, el| format!("{acc}, {el}"));
         match params_str {
@@ -122,7 +135,7 @@ pub trait ToStringForPlot {
 impl ToStringForPlot for FunctionAndParams {
     fn to_string_for_plot(&self) -> String {
         let f_to_string = format!("f(x) = {}", self.f_to_string());
-        let params_str = self.params.iter()
+        let params_str = self.params.get_all().iter()
             .map(|p| format!("{n} = {v}", n=p.name, v=p.value))
             .reduce(|acc, el| format!("{acc}\n{el}"));
         match params_str {

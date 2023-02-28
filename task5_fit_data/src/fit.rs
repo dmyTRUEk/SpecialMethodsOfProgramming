@@ -7,7 +7,6 @@ use crate::{
     extensions::IndexOfMinWithFloor,
     float_type::float,
     function_and_params::FunctionAndParams,
-    params::ImplParams,
     points::Points,
     utils_io::press_enter_to_continue,
 };
@@ -45,12 +44,12 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
     const BETA : float = 1. / ALPHA; // step decrease coefficient
     let mut step: float = 1.;
     let mut iters = 0;
-    if f.params.len() > 0 {
+    if f.params.amount() > 0 {
         while step > MIN_STEP && iters < FIT_MAX_ITERS {
             iters += 1;
             if DEBUG {
                 println!("f.f = {}", f.f_to_string());
-                println!("f.params = {:?}", f.params);
+                println!("f.params = {:#?}", f.params);
                 println!("step = {}", step);
             }
 
@@ -58,42 +57,44 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
             if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
             if !res_at_current_params.is_finite() { return Err(format!("`res_at_current_params` isn't finite")) }
 
-            let mut residues_at_shifted_params = Vec::<float>::with_capacity(2 * f.params.len());
+            let mut residues_at_shifted_params = Vec::<float>::with_capacity(2 * f.params.amount());
 
-            for i in 0..f.params.len() {
-                let param = f.params[i].clone();
-                // TODO(optimize)?: try mutating self.
+            for param in f.params.get_all() {
+                // TODO(optimization)?: try mutating self.
                 let mut params = f.params.clone();
-                // TODO(optimize)?: unroll for loop by hands.
+                // TODO(optimization)?: unroll for loop by hands.
                 for delta in [-step, step] {
                     let new_param_value = param.value + delta;
                     // if !new_param_value.is_finite() { return Err(format!("`param.value + delta` isn't finite")) }
+                    // TODO(optimization)?: just remove this whole if.
                     if !new_param_value.is_finite() {
                         residues_at_shifted_params.push(float::NAN);
                         continue;
                     }
-                    params.set(param.name, new_param_value);
+                    params.set_by_name(param.name, new_param_value);
                     let res = f.calc_fit_residue_with_params(&params, points);
                     residues_at_shifted_params.push(if res.is_finite() { res } else { float::NAN });
                 }
             }
             if DEBUG { println!("res_at_shifted_params = {:?}", residues_at_shifted_params) }
-            assert_eq!(2 * f.params.len(), residues_at_shifted_params.len());
+            assert_eq!(2 * f.params.amount(), residues_at_shifted_params.len());
             // if res_at_shifted_params.iter().any(|r| !r.is_finite()) { return Err(format!("one of `res_at_shifted_params` isn't finite")) }
 
             match residues_at_shifted_params.index_of_min_with_ceil(res_at_current_params) {
-                None => {
-                    if DEBUG { println!("DECREASE STEP") }
-                    step *= BETA;
-                }
                 Some(index_of_min) => {
                     if DEBUG { println!("INCREASE STEP") }
-                    let param_name = f.params[index_of_min / 2].name;
+                    // TODO(optimization)?: use better approach?
+                    let param_name = f.params.get_by_index(index_of_min as usize / 2).name;
                     let delta = if index_of_min % 2 == 0 { -step } else { step };
                     f.params.change_param_by(param_name, delta);
                     step *= ALPHA;
                 }
+                None => {
+                    if DEBUG { println!("DECREASE STEP") }
+                    step *= BETA;
+                }
             }
+
             if DEBUG { println!("\n\n") }
         }
         if iters == FIT_MAX_ITERS {
@@ -126,7 +127,7 @@ mod tests {
 
     use rand::{thread_rng, Rng};
 
-    use crate::{function::Function, param::Param, params::Params, point::Point};
+    use crate::{function::Function, params::Params, point::Point};
 
     const TOLERANCE: float = 1e-3;
 
@@ -146,7 +147,7 @@ mod tests {
                 Params::from_array([('k', k)]),
             );
             fit(&mut f, &points);
-            assert!((2. - f.params[0].value).abs() < TOLERANCE);
+            assert!((2. - f.params.get_by_name_checked('k').unwrap()).abs() < TOLERANCE);
         }
     }
 
@@ -161,7 +162,7 @@ mod tests {
                     rhs: box Function::X
                 }
             },
-            vec![ Param::new('a', 0.5) ],
+            Params::from_array([('a', 0.5)]),
         );
         let points = vec![
             Point::new(0., 0.),
@@ -170,7 +171,7 @@ mod tests {
             Point::new(3., 9.),
         ];
         fit(&mut f, &points);
-        assert!((1. - f.params[0].value).abs() < TOLERANCE);
+        assert!((1. - f.params.get_by_name_checked('a').unwrap()).abs() < TOLERANCE);
     }
 
     #[allow(unused_must_use)]
@@ -183,7 +184,7 @@ mod tests {
                     value: box Function::X
                 }
             },
-            vec![ Param::new('a', 0.5) ],
+            Params::from_array([('a', 0.5)]),
         );
         let points = vec![
             Point::new(0., 0.),
@@ -192,7 +193,7 @@ mod tests {
             Point::new(3., 9.),
         ];
         fit(&mut f, &points);
-        assert!((1. - f.params[0].value).abs() < TOLERANCE);
+        assert!((1. - f.params.get_by_name_checked('a').unwrap()).abs() < TOLERANCE);
     }
 }
 

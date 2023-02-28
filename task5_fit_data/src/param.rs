@@ -26,35 +26,32 @@ pub struct Param {
     pub value: ParamValue,
 }
 
+#[allow(dead_code)]
 impl Param {
     pub const fn new(name: ParamName, value: ParamValue) -> Self {
         Self { name, value }
     }
 
-    #[allow(dead_code)]
-    pub fn gen_name(value: ParamValue) -> Self {
-        let mut rng = thread_rng();
-        Self {
-            name: rng.gen_from_array(PARAMETER_NAMES),
-            value,
-        }
+    pub fn gen_random_name_with_value(value: ParamValue) -> Self {
+        Self::new(Self::gen_random_name(), value)
     }
 
-    pub fn gen_random_value(name: ParamName) -> Self {
-        let mut rng = thread_rng();
-        Self {
-            name,
-            value: rng.gen_range(PARAM_VALUE_MIN ..= PARAM_VALUE_MAX),
-        }
+    pub fn gen_random_value_with_name(name: ParamName) -> Self {
+        Self::new(name, Self::gen_random_value())
     }
 
-    #[allow(dead_code)]
-    pub fn gen_name_and_value() -> Self {
+    pub fn gen_random_name_and_value() -> Self {
+        Self::new(Self::gen_random_name(), Self::gen_random_value())
+    }
+
+    pub fn gen_random_name() -> ParamName {
         let mut rng = thread_rng();
-        Self {
-            name: rng.gen_from_array(PARAMETER_NAMES),
-            value: rng.gen_range(-3. ..= 5.),
-        }
+        rng.gen_from_array(PARAMETER_NAMES)
+    }
+
+    pub fn gen_random_value() -> ParamValue {
+        let mut rng = thread_rng();
+        rng.gen_range(PARAM_VALUE_MIN ..= PARAM_VALUE_MAX)
     }
 }
 

@@ -6,22 +6,21 @@ use crate::float_type::float;
 
 
 pub trait IndexOfMinWithFloor<T> {
-    fn index_of_min_with_ceil(&self, floor: T) -> Option<usize>;
+    fn index_of_min_with_ceil(&self, ceil: T) -> Option<usize>;
 }
 impl IndexOfMinWithFloor<float> for Vec<float> {
-    fn index_of_min_with_ceil(&self, floor: float) -> Option<usize> {
+    fn index_of_min_with_ceil(&self, ceil: float) -> Option<usize> {
         let mut option_index_of_min = None;
         for i in 0..self.len() {
-            if self[i] >= floor || !self[i].is_finite() { continue }
+            if self[i] >= ceil || !self[i].is_finite() { continue }
             match option_index_of_min {
                 None => {
                     option_index_of_min = Some(i);
                 }
-                Some(index_of_min) => {
-                    if self[i] < self[index_of_min] && self[i].is_finite() {
-                        option_index_of_min = Some(i);
-                    }
+                Some(index_of_min) if self[i] < self[index_of_min] => {
+                    option_index_of_min = Some(i);
                 }
+                _ => {}
             }
         }
         option_index_of_min

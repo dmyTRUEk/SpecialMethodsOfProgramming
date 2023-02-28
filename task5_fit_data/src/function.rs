@@ -6,7 +6,7 @@ use crate::{
     extensions::ExtGenFromArray,
     float_type::float,
     param::{PARAMETER_NAMES, ParamName},
-    params::{ImplParams, Params},
+    params::Params,
 };
 
 
@@ -265,7 +265,7 @@ impl Function {
             Self::Const { value } => *value,
             Self::Zero => 0.,
             Self::One  => 1.,
-            Self::Param { name } => params.get(*name),
+            Self::Param { name } => params.get_by_name_unchecked(*name),
 
             Self::Neg { value } => -value.eval(x, params),
 
@@ -287,7 +287,7 @@ impl Function {
             Self::Polynomial { degree } => {
                 let mut r: float = 0.;
                 for i in 0..=*degree {
-                    r += params.get(PARAMETER_NAMES[i]) * x.powi(i as i32);
+                    r += params.get_by_name_unchecked(PARAMETER_NAMES[i]) * x.powi(i as i32);
                 }
                 r
             }
@@ -298,7 +298,7 @@ impl Function {
                     if i >= 2 {
                         denominator *= i as float;
                     }
-                    r += params.get(PARAMETER_NAMES[i]) * x.powi(i as i32) / denominator;
+                    r += params.get_by_name_unchecked(PARAMETER_NAMES[i]) * x.powi(i as i32) / denominator;
                 }
                 r
             }
@@ -335,7 +335,7 @@ impl Function {
                 Function::Const { value } => Token::Operand(*value),
                 Function::Zero => Token::Operand(0.),
                 Function::One  => Token::Operand(1.),
-                Function::Param { name } => Token::Operand(p.get(*name)),
+                Function::Param { name } => Token::Operand(p.get_by_name_unchecked(*name)),
 
                 Function::Neg { .. } => Token::Operator(Operator::Neg),
 
@@ -460,7 +460,7 @@ impl Function {
             | Self::Mul { lhs, rhs }
             | Self::Div { lhs, rhs }
             | Self::Pow { lhs, rhs }
-            => lhs.get_params_names().into_iter().chain(rhs.get_params_names().into_iter()).collect(),
+            => [lhs.get_params_names(), rhs.get_params_names()].concat(),
 
             Self::Polynomial { degree }
             | Self::BtrPolynomial { degree }
@@ -537,7 +537,7 @@ impl Function {
             | expr @ Self::Mul { lhs: box Self::Const { .. } | box Self::One | box Self::Zero, rhs: box Self::Const { .. } | box Self::One | box Self::Zero } // eval const * const
             | expr @ Self::Div { lhs: box Self::Const { .. } | box Self::One | box Self::Zero, rhs: box Self::Const { .. } | box Self::One | box Self::Zero } // eval const / const
             | expr @ Self::Pow { lhs: box Self::Const { .. } | box Self::One | box Self::Zero, rhs: box Self::Const { .. } | box Self::One | box Self::Zero } // eval const ^ const
-            => Self::Const { value: expr.eval(0., &Params::empty()) },
+            => Self::Const { value: expr.eval(0., &Params::new()) },
 
             // simplifies to `0`:
             Self::Sub { lhs: box Self::X, rhs: box Self::X } // x - x == 0
@@ -1299,7 +1299,7 @@ mod tests {
             assert_eq!(
                 2.5,
                 Function::from_str("x").unwrap()
-                    .eval(2.5, &Params::empty()),
+                    .eval(2.5, &Params::new()),
             );
         }
         #[test]
