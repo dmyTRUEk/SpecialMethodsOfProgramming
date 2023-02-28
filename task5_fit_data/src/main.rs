@@ -30,8 +30,8 @@ use crate::{
 
 const CUSTOM_FUNCTION_FIT: bool = false;
 
-pub const MIN_STEP: float = if CUSTOM_FUNCTION_FIT { 1e-6 } else { 1e-3 };
-pub const FIT_MAX_ITERS: u32 = if CUSTOM_FUNCTION_FIT { 10_000 } else { 1_000 };
+pub const MIN_STEP: float = if CUSTOM_FUNCTION_FIT { 1e-4 } else { 1e-3 };
+pub const FIT_MAX_ITERS: u32 = if CUSTOM_FUNCTION_FIT { 100_000 } else { 1_000 };
 pub const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
 pub const RESIDUAL_FUNCTION_TYPE: ResidualFunctionType = ResidualFunctionType::LeastSquares;
 
@@ -76,8 +76,8 @@ fn main() {
 
         let mut f = if CUSTOM_FUNCTION_FIT {
             FunctionAndParams::gen_from_f(
-                Function::from_str("(((l * (m + cos(x * k))) / (p + sin((x * a)^2))))^2").unwrap()
-                // m k l p a
+                Function::from_str("(((a * (b + cos(x * c - d))) / (g + sin((h * x - i)^2))))^2").unwrap()
+                // a b c d g h i
             )
         } else {
             let complexity: u32 = rng.gen_range(10 ..= 30);
@@ -88,6 +88,7 @@ fn main() {
 
         f = f.simplify();
         if f.params.len() > FUNCTION_MAX_PARAMS {
+            if CUSTOM_FUNCTION_FIT { panic!("too many params in function, exiting") }
             // println!("too many params in generated function, skipping");
             continue;
         }
@@ -177,11 +178,39 @@ fn fit_custom() {
 fn print_stats(funcs_generated: u64, funcs_fitted: u64, time_begin: Instant) {
     let time_now = Instant::now();
     let time_delta = time_now - time_begin;
-    let millis_passed = time_delta.as_millis();
-    let funcs_generated_per_sec = 1000. * (funcs_generated as float) / (millis_passed as float);
-    let funcs_fitted_per_sec    = 1000. * (funcs_fitted    as float) / (millis_passed as float);
-    println!("funcs generated: {}\t{:.0}/s", funcs_generated, funcs_generated_per_sec);
-    println!("funcs fitted   : {}\t{:.0}/s", funcs_fitted, funcs_fitted_per_sec);
+    let millis_passed = time_delta.as_micros();
+    let funcs_generated_per_sec = 1e6 * (funcs_generated as float) / (millis_passed as float);
+    let funcs_fitted_per_sec    = 1e6 * (funcs_fitted    as float) / (millis_passed as float);
+    fn number_to_decimal_places(x: float) -> u8 {
+        match x {
+            x if x > 1000. => 0,
+            x if x > 100.0 => 1,
+            x if x > 10.00 => 2,
+            x if x > 1.000 => 3,
+            x if x > 0.100 => 3,
+            x if x > 0.010 => 4,
+            x if x > 0.001 => 5,
+            _              => 6
+        }
+    }
+    fn format_with_decimal_places(x: float, decimal_places: u8) -> String {
+        match decimal_places {
+            0 => format!("{:.0}", x),
+            1 => format!("{:.1}", x),
+            2 => format!("{:.2}", x),
+            3 => format!("{:.3}", x),
+            4 => format!("{:.4}", x),
+            5 => format!("{:.5}", x),
+            6 => format!("{:.6}", x),
+            7 => format!("{:.7}", x),
+            _ => unimplemented!()
+        }
+    }
+    fn format(x: float) -> String {
+        format_with_decimal_places(x, number_to_decimal_places(x))
+    }
+    println!("funcs generated: {}\t{}/s", funcs_generated, format(funcs_generated_per_sec));
+    println!("funcs fitted   : {}\t{}/s", funcs_fitted, format(funcs_fitted_per_sec));
 }
 
 
