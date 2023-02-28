@@ -22,7 +22,7 @@ impl FunctionAndParams {
     }
 
     pub fn gen_from_f(f: Function) -> Self {
-        let params = Params::gen_from_f(&f);
+        let params = Params::gen_random_from_f(&f);
         Self::new(f, params)
     }
 

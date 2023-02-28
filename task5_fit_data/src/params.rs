@@ -18,7 +18,7 @@ pub trait ImplParams {
     #[allow(non_snake_case)]
     fn empty() -> Self;
     fn from_array<const N: usize>(array: [(char, float); N]) -> Self;
-    fn gen_from_f(f: &Function) -> Self;
+    fn gen_random_from_f(f: &Function) -> Self;
     fn get(&self, name: ParamName) -> float;
     fn set(&mut self, name: ParamName, new_value: float);
     fn change_param_by(&mut self, name: ParamName, delta: float);
@@ -32,12 +32,12 @@ impl ImplParams for Params {
             .to_vec()
     }
 
-    fn gen_from_f(f: &Function) -> Self {
+    fn gen_random_from_f(f: &Function) -> Self {
         let mut params_names = f.get_params_names();
         params_names.sort();
         params_names.dedup();
         let params = params_names.into_iter()
-            .map(|name| Param::gen_value(name))
+            .map(|name| Param::gen_random_value(name))
             .collect();
         params
     }

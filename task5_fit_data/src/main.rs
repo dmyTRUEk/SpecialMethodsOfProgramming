@@ -28,10 +28,15 @@ use crate::{
 };
 
 
-pub const MIN_STEP: float = 1e-3;
-pub const FIT_MAX_ITERS: u32 = 1_000;
+const CUSTOM_FUNCTION_FIT: bool = false;
+
+pub const MIN_STEP: float = if CUSTOM_FUNCTION_FIT { 1e-6 } else { 1e-3 };
+pub const FIT_MAX_ITERS: u32 = if CUSTOM_FUNCTION_FIT { 10_000 } else { 1_000 };
 pub const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
 pub const RESIDUAL_FUNCTION_TYPE: ResidualFunctionType = ResidualFunctionType::LeastSquares;
+
+pub const PARAM_VALUE_MIN: float = -5.;
+pub const PARAM_VALUE_MAX: float =  5.;
 
 
 const FILENAME: &str = "./data/fit_Dm_4.dat";
@@ -69,10 +74,17 @@ fn main() {
         // }
         funcs_generated += 1;
 
-        let complexity: u32 = rng.gen_range(10 ..= 30);
-        let mut f = FunctionAndParams::gen(complexity);
-        // let mut f = FunctionAndParams::gen_from_f(Function::BtrPolynomial { degree: 10 });
-        // println!("f = {}", f.to_string());
+        let mut f = if CUSTOM_FUNCTION_FIT {
+            FunctionAndParams::gen_from_f(
+                Function::from_str("(((l * (m + cos(x * k))) / (p + sin((x * a)^2))))^2").unwrap()
+                // m k l p a
+            )
+        } else {
+            let complexity: u32 = rng.gen_range(10 ..= 30);
+            let mut f = FunctionAndParams::gen(complexity);
+            // println!("f = {}", f.to_string());
+            f
+        };
 
         f = f.simplify();
         if f.params.len() > FUNCTION_MAX_PARAMS {
@@ -89,7 +101,7 @@ fn main() {
         funcs_fitted += 1;
         if !fit_residue.clone().is_finite() { continue }
 
-        if fit_residue < best_f_and_res.1 {
+        if fit_residue <= best_f_and_res.1 {
             print_stats(funcs_generated, funcs_fitted, time_begin);
             println!();
             println!("FOUND NEW BEST FUNCTION:");

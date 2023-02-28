@@ -2,7 +2,7 @@
 
 use rand::{Rng, thread_rng};
 
-use crate::{extensions::ExtGenFromArray, float_type::float};
+use crate::{extensions::ExtGenFromArray, float_type::float, PARAM_VALUE_MIN, PARAM_VALUE_MAX};
 
 
 pub type ParamName = char;
@@ -40,11 +40,11 @@ impl Param {
         }
     }
 
-    pub fn gen_value(name: ParamName) -> Self {
+    pub fn gen_random_value(name: ParamName) -> Self {
         let mut rng = thread_rng();
         Self {
             name,
-            value: rng.gen_range(-3. ..= 5.),
+            value: rng.gen_range(PARAM_VALUE_MIN ..= PARAM_VALUE_MAX),
         }
     }
 
