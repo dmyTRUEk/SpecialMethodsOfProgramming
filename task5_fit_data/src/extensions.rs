@@ -12,7 +12,7 @@ impl IndexOfMinWithFloor<float> for Vec<float> {
     fn index_of_min_with_ceil(&self, floor: float) -> Option<usize> {
         let mut option_index_of_min = None;
         for i in 0..self.len() {
-            if self[i] >= floor { continue }
+            if self[i] >= floor || !self[i].is_finite() { continue }
             match option_index_of_min {
                 None => {
                     option_index_of_min = Some(i);
@@ -51,6 +51,7 @@ mod tests {
     fn index_of_min_with_ceil() {
         assert_eq!(Some(5), vec![14., 0., 1., 4., 8., -53., 43., 520., 8494893.].index_of_min_with_ceil(42.));
         assert_eq!(Some(5), vec![14., 0., 1., 4., 8., -53., 43., 520., float::NAN].index_of_min_with_ceil(42.));
+        assert_eq!(None, vec![14., 0., 1., 4., 8., -53., 43., 520., float::NAN].index_of_min_with_ceil(-100.));
         assert_eq!(None, vec![43., 520., 8494893.].index_of_min_with_ceil(42.));
         assert_eq!(None, vec![43., 520., 8494893., 42.].index_of_min_with_ceil(42.));
     }
