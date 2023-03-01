@@ -2,7 +2,7 @@
 
 use crate::{
     RESIDUAL_FUNCTION_TYPE,
-    fit::ResidualFunctionType,
+    fit::DiffFunctionType,
     float_type::float,
     function::Function,
     param::Param,
@@ -87,17 +87,15 @@ impl FunctionAndParams {
     pub fn calc_fit_residue_with_params(&self, params: &Params, points: &Points) -> float {
         const DEBUG: bool = false;
         match RESIDUAL_FUNCTION_TYPE {
-            ResidualFunctionType::LeastSquares => {
+            DiffFunctionType::DySquared => {
                 let mut res = 0.;
                 for point in points {
                     let dy = self.eval_with_params(params, point.x) - point.y;
-                    if DEBUG { println!("calc_fit_residue_with_params: dy = {}", dy) }
                     res += dy.powi(2);
-                    if DEBUG { println!("calc_fit_residue_with_params: res = {}", res) }
                 }
-                res
+                res.sqrt()
             }
-            ResidualFunctionType::LeastAbs => {
+            DiffFunctionType::DyAbs => {
                 let mut res = 0.;
                 for point in points {
                     let dy = self.eval_with_params(params, point.x) - point.y;
@@ -105,7 +103,7 @@ impl FunctionAndParams {
                 }
                 res
             }
-            ResidualFunctionType::LeastDist => { todo!() }
+            DiffFunctionType::LeastDist => { unimplemented!() }
         }
     }
 

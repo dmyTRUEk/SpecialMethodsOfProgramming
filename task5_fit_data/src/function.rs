@@ -413,7 +413,7 @@ impl Function {
             | expr @ Self::Mul { lhs: box Self::Const { .. } | box Self::One | box Self::Zero, rhs: box Self::Const { .. } | box Self::One | box Self::Zero } // eval const * const
             | expr @ Self::Div { lhs: box Self::Const { .. } | box Self::One | box Self::Zero, rhs: box Self::Const { .. } | box Self::One | box Self::Zero } // eval const / const
             | expr @ Self::Pow { lhs: box Self::Const { .. } | box Self::One | box Self::Zero, rhs: box Self::Const { .. } | box Self::One | box Self::Zero } // eval const ^ const
-            => Self::Const { value: expr.eval(0., &Params::new()) },
+            => Self::Const { value: expr.eval(0., &Params::empty()) },
 
             // simplifies to `0`:
             Self::Sub { lhs: box Self::X, rhs: box Self::X } // x - x == 0
@@ -1175,7 +1175,7 @@ mod tests {
             assert_eq!(
                 2.5,
                 Function::from_str("x").unwrap()
-                    .eval(2.5, &Params::new()),
+                    .eval(2.5, &Params::empty()),
             );
         }
         #[test]

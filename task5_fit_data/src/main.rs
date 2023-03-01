@@ -4,6 +4,7 @@
 
 use std::time::Instant;
 
+use fit::FitResults;
 use rand::{thread_rng, Rng};
 
 mod extensions;
@@ -18,7 +19,7 @@ mod points;
 mod utils_io;
 
 use crate::{
-    fit::{FitAlgorithmType, ResidualFunctionType, fit},
+    fit::{DiffFunctionType, FitAlgorithmType, fit},
     float_type::float,
     function::Function,
     function_and_params::{FunctionAndParams, ToStringForPlot},
@@ -30,12 +31,13 @@ use crate::{
 const CUSTOM_FUNCTION_FIT: bool = false;
 
 pub const MIN_STEP: float = if CUSTOM_FUNCTION_FIT { 1e-4 } else { 1e-3 };
-pub const FIT_MAX_ITERS: u32 = if CUSTOM_FUNCTION_FIT { 100_000 } else { 1_000 };
-pub const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
-pub const RESIDUAL_FUNCTION_TYPE: ResidualFunctionType = ResidualFunctionType::LeastSquares;
+pub const FIT_RESIDUE_EVALS_MAX: u32 = if CUSTOM_FUNCTION_FIT { 1_000_000 } else { 10_000 };
+pub const FIT_ALGORITHM_TYPE    : FitAlgorithmType = FitAlgorithmType::DownhillSimplex;
+pub const RESIDUAL_FUNCTION_TYPE: DiffFunctionType = DiffFunctionType::DySquared;
+pub const PARAMS_DIFF_TYPE      : DiffFunctionType = DiffFunctionType::DyAbs;       // for DownhillSimplex method
 
-pub const PARAM_VALUE_MIN: float = -5.;
-pub const PARAM_VALUE_MAX: float =  5.;
+pub const PARAM_VALUE_MIN: float = -9.;
+pub const PARAM_VALUE_MAX: float =  9.;
 
 
 const FILENAME: &str = "./data/fit_Dm_4.dat";
@@ -58,10 +60,14 @@ fn main() {
     let mut best_f_and_res: (FunctionAndParams, float) = (FunctionAndParams::gen_random_params_from_function(Function::X), FIT_RESIDUE_THRESHOLD);
     let mut funcs_generated: u64 = 0;
     let mut funcs_fitted: u64 = 0;
+    // let mut fit_residue_evals_array = [0_u32; 100];
+    // let mut i: usize = 0;
     let time_begin = Instant::now();
     loop {
-        // if funcs_fitted >= 1_000 {
+        // if funcs_fitted >= 50_000 {
         //     print_stats(funcs_generated, funcs_fitted, time_begin);
+        //     // println!("fit_residue_evals_array = {:?}", fit_residue_evals_array);
+        //     // println!("fit_residue_evals_array.total = {}", fit_residue_evals_array.iter().sum::<u32>());
         //     return
         // }
         // if funcs_fitted % 100 == 0 {
@@ -107,16 +113,17 @@ fn main() {
         let fit_results = fit(&mut f, &points);
         // println!("fit_residue = {:?}", fit_results);
         // press_enter_to_continue();
-        if fit_results.is_err() { continue }
-        let (fit_residue, fit_iters) = fit_results.unwrap();
+        if fit_results.is_none() { continue }
+        let FitResults { fit_residue, fit_residue_evals } = fit_results.unwrap();
         funcs_fitted += 1;
+        // fit_residue_evals_array[i] = fit_residue_evals;
         if !fit_residue.clone().is_finite() { continue }
 
         if fit_residue <= best_f_and_res.1 {
             print_stats(funcs_generated, funcs_fitted, time_begin);
             println!();
             println!("FOUND NEW BEST FUNCTION:");
-            println!("fit_iters: {}", fit_iters);
+            println!("fit_residue_evals: {}", fit_residue_evals);
             println!("FUNCTION:");
             println!("{}", f.to_string_for_plot());
             println!("\"residue = {}", fit_residue);
@@ -126,6 +133,7 @@ fn main() {
             println!();
             println!("searching...");
         }
+        // i += 1;
     }
 }
 
@@ -168,13 +176,14 @@ fn fit_custom() {
     // f = f.simplify();
     // println!("f = {}", f.to_string());
     let fit_results = fit(&mut f, &points);
-    let (fit_residue, _fit_iters) = match fit_results {
-        Ok((fit_residue, fit_iters)) => {
-            println!("fit_iters: {}", fit_iters);
-            (fit_residue, fit_iters)
+    let (fit_residue, _f_evals) = match fit_results {
+        Some(FitResults { fit_residue, fit_residue_evals }) => {
+            println!("fit_residue_evals: {}", fit_residue_evals);
+            (fit_residue, fit_residue_evals)
         }
-        Err(e) => {
-            println!("Unable to fit: {}", e);
+        None => {
+            // println!("Unable to fit: {}", e);
+            println!("Unable to fit");
             return;
         }
     };
@@ -222,8 +231,6 @@ fn print_stats(funcs_generated: u64, funcs_fitted: u64, time_begin: Instant) {
     println!("funcs generated: {}\t{}/s", funcs_generated, format(funcs_generated_per_sec));
     println!("funcs fitted   : {}\t{}/s", funcs_fitted, format(funcs_fitted_per_sec));
 }
-
-
 
 
 
