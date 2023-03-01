@@ -125,6 +125,7 @@ Program algorithm:
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/cfb9e135b18ec9b8ff2ba02e6a87f8f2878a21a0/SMoPD_task5.4_fit3.png)
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/cfb9e135b18ec9b8ff2ba02e6a87f8f2878a21a0/SMoPD_task5.4_fit4.png)
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/cfb9e135b18ec9b8ff2ba02e6a87f8f2878a21a0/SMoPD_task5.4_fit5.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/759ff1e26fd01609751deb448dbc5c4bb151c1c8/SMoPD_task5.4_fit6.png)
 
 ## Task 5.fun
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit1.png)
