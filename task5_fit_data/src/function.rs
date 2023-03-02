@@ -62,6 +62,10 @@ impl Function {
         const DEBUG: bool = false;
         const LB: char = '(';
         const RB: char = ')';
+        const LB_CURLY: char = '{';
+        const RB_CURLY: char = '}';
+        const LB_SQUARE: char = '[';
+        const RB_SQUARE: char = ']';
         const PLUS: char = '+';
         const MINUS: char = '-';
         const MULTIPLY: char = '*';
@@ -69,6 +73,10 @@ impl Function {
         const POWER: char = '^';
         if DEBUG { println!("{}", string) }
         let string: String = string.replace(' ', "");
+        let string: String = string.replace(LB_CURLY, &LB.to_string());
+        let string: String = string.replace(RB_CURLY, &RB.to_string());
+        let string: String = string.replace(LB_SQUARE, &LB.to_string());
+        let string: String = string.replace(RB_SQUARE, &RB.to_string());
         let len = string.len();
 
         if string.chars().next().unwrap() == LB && string.chars().last().unwrap() == RB {
