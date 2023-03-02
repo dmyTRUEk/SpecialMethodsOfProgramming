@@ -109,7 +109,7 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
 
             if DEBUG { println!("\n\n") }
         }
-        if fit_residue_evals == FIT_RESIDUE_EVALS_MAX {
+        if fit_residue_evals >= FIT_RESIDUE_EVALS_MAX {
             if DEBUG {
                 println!("{}", "!".repeat(21));
                 println!("HIT MAX_ITERS!!!");
@@ -234,7 +234,7 @@ pub fn fit_by_downhill_simplex_algorithm(f: &mut FunctionAndParams, points: &Poi
                 }
             };
         }
-        if fit_residue_evals == FIT_RESIDUE_EVALS_MAX {
+        if fit_residue_evals >= FIT_RESIDUE_EVALS_MAX {
             if DEBUG {
                 println!("{}", "!".repeat(21));
                 println!("HIT MAX_ITERS!!!");
