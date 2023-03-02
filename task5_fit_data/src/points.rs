@@ -8,6 +8,7 @@ use std::{
 use crate::{float_type::float, point::Point};
 
 
+// TODO(refactor)?: make actual struct.
 pub type Points = Vec<Point>;
 
 pub trait ImplPoints {

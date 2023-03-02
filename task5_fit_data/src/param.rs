@@ -2,7 +2,7 @@
 
 use rand::{Rng, thread_rng};
 
-use crate::{extensions::ExtGenFromArray, float_type::float, PARAM_VALUE_MIN, PARAM_VALUE_MAX};
+use crate::{extensions::ExtGenFromArray, float_type::float, FUNCTION_PARAM_VALUE_MAX, FUNCTION_PARAM_VALUE_MIN};
 
 
 pub type ParamName = char;
@@ -49,7 +49,7 @@ impl Param {
     }
 
     pub fn gen_random_value() -> ParamValue {
-        thread_rng().gen_range(PARAM_VALUE_MIN ..= PARAM_VALUE_MAX)
+        thread_rng().gen_range(FUNCTION_PARAM_VALUE_MIN ..= FUNCTION_PARAM_VALUE_MAX)
     }
 }
 

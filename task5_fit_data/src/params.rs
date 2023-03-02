@@ -6,7 +6,6 @@ use std::{
 };
 
 use crate::{
-    PARAMS_DIFF_TYPE,
     fit::DiffFunctionType,
     float_type::float,
     function::Function,
@@ -198,10 +197,10 @@ impl Params {
         self_
     }
 
-    pub fn diff(&self, other: Self) -> float {
+    pub fn diff(&self, other: Self, diff_function_type: DiffFunctionType) -> float {
         // assert_eq!(self.get_all_names(), other.get_all_names());
         self.params.iter().zip(other.params)
-            .map(|(param_a, param_b)| match PARAMS_DIFF_TYPE {
+            .map(|(param_a, param_b)| match diff_function_type {
                 DiffFunctionType::DyAbs     => (param_a.value - param_b.value).abs(),
             //  DiffFunctionType::DySquared => (param_a.value - param_b.value).powi(2),
                 DiffFunctionType::DySquared => unimplemented!("bc you must also take sqrt at the end"),

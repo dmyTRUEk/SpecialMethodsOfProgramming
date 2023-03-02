@@ -1,10 +1,8 @@
 //! Fits function to points.
 
 use crate::{
-    FIT_ALGORITHM_TYPE,
-    FIT_RESIDUE_EVALS_MAX,
-    MIN_STEP,
-    extensions::{Avg, IndexOfMinWithFloor, IndexOfMax},
+    extensions::{Avg, IndexOfMax, IndexOfMinWithFloor},
+    fit_params::{FIT_ALGORITHM_MIN_STEP, FIT_ALGORITHM_TYPE, FIT_RESIDUE_EVALS_MAX},
     float_type::float,
     function_and_params::FunctionAndParams,
     params::Params,
@@ -13,6 +11,7 @@ use crate::{
 };
 
 
+#[allow(dead_code)]
 pub enum FitAlgorithmType {
     PatternSearch,
     DownhillSimplex,
@@ -50,14 +49,13 @@ pub fn fit_with_fit_algorith_type(f: &mut FunctionAndParams, points: &Points, fi
 
 
 fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -> FitResultsOrNone {
+    use crate::patter_search_params::*;
     const DEBUG: bool = false;
-    const ALPHA: float = 2.;         // step increase coefficient
-    const BETA : float = 1. / ALPHA; // step decrease coefficient
     let f_params_amount: usize = f.params.amount();
-    let mut step: float = 1.;
+    let mut step: float = INITIAL_STEP;
     let mut fit_residue_evals = 0;
     if f_params_amount > 0 {
-        while step > MIN_STEP && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
+        while step > FIT_ALGORITHM_MIN_STEP && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
             if DEBUG {
                 println!("f.f = {}", f.f_to_string());
                 println!("f.params = {:#?}", f.params);
@@ -132,13 +130,13 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
 
 
 pub fn fit_by_downhill_simplex_algorithm(f: &mut FunctionAndParams, points: &Points) -> FitResultsOrNone {
+    use crate::downhill_simplex_params::*;
     const DEBUG: bool = false;
-    const INITIAL_SIMPLEX_SCALE: float = 2.0;
-    const LERP_TS: [float; 4] = [0.5, 0.45, 0.55, 0.6];
+    const LERP_TS: [float; 15] = [0.5, 0.45, 0.55, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.1, 0.9, 0.01, 0.99, 0.001, 0.999];
 
     fn is_close_enough(params_a: Params, params_b: Params) -> bool {
-        let diff = params_a.diff(params_b);
-        diff < MIN_STEP
+        let diff = params_a.diff(params_b, PARAMS_DIFF_TYPE);
+        diff < FIT_ALGORITHM_MIN_STEP
     }
 
     let f_params_amount: usize = f.params.amount();

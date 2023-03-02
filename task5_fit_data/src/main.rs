@@ -4,7 +4,6 @@
 
 use std::time::Instant;
 
-use fit::FitResults;
 use rand::{thread_rng, Rng};
 
 mod extensions;
@@ -19,7 +18,7 @@ mod points;
 mod utils_io;
 
 use crate::{
-    fit::{DiffFunctionType, FitAlgorithmType, fit},
+    fit::{DiffFunctionType, FitAlgorithmType, FitResults, fit},
     float_type::float,
     function::Function,
     function_and_params::{FunctionAndParams, ToStringForPlot},
@@ -28,23 +27,42 @@ use crate::{
 };
 
 
-const CUSTOM_FUNCTION_FIT: bool = false;
-
-pub const MIN_STEP: float = if CUSTOM_FUNCTION_FIT { 1e-4 } else { 1e-3 };
-pub const FIT_RESIDUE_EVALS_MAX: u32 = if CUSTOM_FUNCTION_FIT { 1_000_000 } else { 10_000 };
-pub const FIT_ALGORITHM_TYPE    : FitAlgorithmType = FitAlgorithmType::DownhillSimplex;
-pub const RESIDUAL_FUNCTION_TYPE: DiffFunctionType = DiffFunctionType::DySquared;
-pub const PARAMS_DIFF_TYPE      : DiffFunctionType = DiffFunctionType::DyAbs;       // for DownhillSimplex method
-
-pub const PARAM_VALUE_MIN: float = -9.;
-pub const PARAM_VALUE_MAX: float =  9.;
-
-
 const FILENAME: &str = "./data/fit_Dm_4.dat";
 
-const FIT_RESIDUE_THRESHOLD: float = float::INFINITY;
+const CUSTOM_FUNCTION_FIT: bool = false;
+
+mod fit_params {
+    use super::*;
+    pub const FIT_ALGORITHM_MIN_STEP: float = if CUSTOM_FUNCTION_FIT { 1e-4 } else { 1e-3 };
+    pub const FIT_RESIDUE_EVALS_MAX: u32 = if CUSTOM_FUNCTION_FIT { 1_000_000 } else { 10_000 };
+    pub const FIT_ALGORITHM_TYPE    : FitAlgorithmType = FitAlgorithmType::PatternSearch;
+    pub const RESIDUAL_FUNCTION_TYPE: DiffFunctionType = DiffFunctionType::DySquared;
+}
+
+mod patter_search_params {
+    use super::*;
+    pub const INITIAL_STEP: float = 1.;
+    pub const ALPHA: float = 2.;         // step increase coefficient
+    pub const BETA : float = 1. / ALPHA; // step decrease coefficient
+}
+
+mod downhill_simplex_params {
+    use super::*;
+    pub const INITIAL_SIMPLEX_SCALE: float = 1.;
+    pub const PARAMS_DIFF_TYPE: DiffFunctionType = DiffFunctionType::DyAbs;
+}
+
+// TODO(refactor): make private (non `pub`).
+pub const FUNCTION_PARAM_VALUE_MIN: float = -9.;
+pub const FUNCTION_PARAM_VALUE_MAX: float =  9.;
+
 const FUNCTION_PARAMS_AMOUNT_MIN: usize = 1;
 const FUNCTION_PARAMS_AMOUNT_MAX: usize = 7;
+
+const FUNCTION_COMPLEXITY_MIN: u32 = 5;
+const FUNCTION_COMPLEXITY_MAX: u32 = 30;
+
+const FIT_RESIDUE_THRESHOLD: float = float::INFINITY;
 
 
 fn main() {
@@ -95,7 +113,7 @@ fn main() {
                 ])
             )
         } else {
-            let complexity: u32 = rng.gen_range(10 ..= 30);
+            let complexity: u32 = rng.gen_range(FUNCTION_COMPLEXITY_MIN ..= FUNCTION_COMPLEXITY_MAX);
             let mut f = FunctionAndParams::gen_random_function_and_params(complexity);
             // println!("f = {}", f.to_string());
             f = f.simplify();

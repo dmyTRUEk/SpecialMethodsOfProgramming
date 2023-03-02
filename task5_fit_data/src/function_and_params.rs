@@ -1,8 +1,8 @@
 //! Function and Params struct.
 
 use crate::{
-    RESIDUAL_FUNCTION_TYPE,
     fit::DiffFunctionType,
+    fit_params::RESIDUAL_FUNCTION_TYPE,
     float_type::float,
     function::Function,
     param::Param,
