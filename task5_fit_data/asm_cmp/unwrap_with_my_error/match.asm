@@ -1,7 +1,7 @@
 example::unwrap_with_my_error:
         push    rbx
         mov     rbx, rdi
-        test    rsi, rsi
+        test    rsi, rsi    ; check if `rsi` is 0
         je      .LBB0_1
         movabs  rax, -3689348814741910323
         mulx    rax, rax, rax

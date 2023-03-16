@@ -1,7 +1,7 @@
 example::unwrap_with_my_error:
         push    rbx
         mov     rbx, rdi
-        cmp     rsi, 1
+        cmp     rsi, 1      ; check if `rsi` is 1
         jne     .LBB0_1
         movabs  rax, -3689348814741910323
         mulx    rax, rax, rax
