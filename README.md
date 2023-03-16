@@ -169,3 +169,27 @@ Program algorithm:
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit39.png)
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit40.png)
 
+
+# Task 6: deconvolution
+
+**Task:** make deconvolution of given data with given instrumental function.
+
+**Solution:** [here](./task6_deconvolution/src/main.rs).
+
+**Answers:**
+
+## Task 6.0:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.0.png)
+
+## Task 6.2:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.2.png)
+
+## Task 6.3:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.3_unfixed.png)
+
+## Task 6.3 (fixed instrumental function):
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.3_fixed.png)
+
+## Task 6.4:
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.4.png)
+
