@@ -77,16 +77,16 @@ pub fn convolve(points_spectrum_original: &Vec<float>, points_instrument: &Vec<f
         let mut point_convolved = 0.;
         for j in 0..points_instrument.len() {
             let d: i32 = j as i32 - points_instrument.len() as i32 / 2;
-            let points_spectrum_index  : i32 = i as i32 - d;
-            let points_instrument_index: i32 = j as i32;
-            let psi = points_spectrum_index;
-            let pii = points_instrument_index;
+            // points_spectrum_index
+            let psi: i32 = i as i32 - d;
+            // points_instrument_index
+            let pii: i32 = j as i32;
             let is_psi_in_range: bool = 0 <= psi && psi < points_spectrum_original.len() as i32;
             let is_pii_in_range: bool = 0 <= pii && pii < points_instrument.len() as i32;
             if is_psi_in_range && is_pii_in_range {
-                let point_spectrum = points_spectrum_original[points_spectrum_index as usize];
-                let point_instrument = points_instrument[points_instrument_index as usize];
-                point_convolved += point_spectrum * point_instrument;
+                let point_spectrum_original = points_spectrum_original[psi as usize];
+                let point_instrument        = points_instrument       [pii as usize];
+                point_convolved += point_spectrum_original * point_instrument;
             }
         }
         points_convolved.push(point_convolved);
@@ -104,8 +104,8 @@ pub enum DeconvolutionSolverType {
 impl DeconvolutionSolverType {
     pub fn deconvolve(&self, points_spectrum: Vec<float>, points_instrument: Vec<float>) -> FitResultsOrError {
         match DECONVOLUTION_SOLVER_TYPE {
-            DeconvolutionSolverType::Simple  => Self::deconvolve_simple(points_spectrum, points_instrument),
-            DeconvolutionSolverType::Fourier => Self::deconvolve_fourier(points_spectrum, points_instrument)
+            DeconvolutionSolverType::Simple  => Self::deconvolve_simple (points_spectrum, points_instrument),
+            DeconvolutionSolverType::Fourier => Self::deconvolve_fourier(points_spectrum, points_instrument),
         }
     }
 
@@ -175,8 +175,8 @@ pub enum FitAlgorithmType {
 impl FitAlgorithmType {
     pub fn fit(&self, f_params_amount: usize, residue_function: impl Fn(&Vec<float>) -> float) -> FitResultsOrError {
         match &self {
-            FitAlgorithmType::PatternSearch => Self::fit_by_pattern_search_algorithm(f_params_amount, residue_function),
-            FitAlgorithmType::DownhillSimplex => Self::fit_by_downhill_simplex_algorithm(f_params_amount, residue_function)
+            FitAlgorithmType::PatternSearch   => Self::fit_by_pattern_search_algorithm  (f_params_amount, residue_function),
+            FitAlgorithmType::DownhillSimplex => Self::fit_by_downhill_simplex_algorithm(f_params_amount, residue_function),
         }
     }
 
