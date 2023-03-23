@@ -179,17 +179,17 @@ Program algorithm:
 **Answers:**
 
 ## Task 6.0:
-![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.0.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/94a9bb994e348f8510ffdab542c1369aa397c263/SMoPD_task6n.0.png)
 
 ## Task 6.2:
-![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.2.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/94a9bb994e348f8510ffdab542c1369aa397c263/SMoPD_task6n.2.png)
 
 ## Task 6.3:
-![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.3_unfixed.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/94a9bb994e348f8510ffdab542c1369aa397c263/SMoPD_task6n.3_unfixed.png)
 
 ## Task 6.3 (fixed instrumental function):
-![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.3_fixed.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/94a9bb994e348f8510ffdab542c1369aa397c263/SMoPD_task6n.3_fixed.png)
 
 ## Task 6.4:
-![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/4e6de70007921f280d3ca53a0c698c56c675ed72/SMoPD_task6.4.png)
+![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/94a9bb994e348f8510ffdab542c1369aa397c263/SMoPD_task6n.4.png)
 
