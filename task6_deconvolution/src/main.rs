@@ -3,16 +3,18 @@
 use std::{
     env,
     fs::File,
-    io::{BufReader, BufRead, Write},
+    io::{BufRead, BufReader},
     path::Path,
 };
+
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 
 mod fit_params {
     use super::*;
     pub const INITIAL_VALUES: float = 0.;
     pub const FIT_ALGORITHM_MIN_STEP: float = 1e-4;
-    pub const FIT_RESIDUE_EVALS_MAX: u32 = 10_000_000;
+    pub const FIT_RESIDUE_EVALS_MAX: u64 = 100_000_000;
     pub const FIT_ALGORITHM_TYPE    : FitAlgorithmType = FitAlgorithmType::PatternSearch;
     pub const RESIDUAL_FUNCTION_TYPE: DiffFunctionType = DiffFunctionType::DySqr;
 }
@@ -43,11 +45,23 @@ fn main() {
         _ => panic!("Too many CLI args.")
     };
 
-    let points_spectrum   = load_data_y(filepathstr_spectrum);
+    print!("loading spectrum from `{}`...", filepathstr_spectrum); flush();
+    let points_spectrum = load_data_y(filepathstr_spectrum);
+    println!(" done");
+
+    print!("loading instrument from `{}`...", filepathstr_instrument); flush();
     let points_instrument = load_data_y(filepathstr_instrument);
+    println!(" done");
+
+    // TODO: warning if points in instr less than in spectrum.
+
+    println!("FIT_RESIDUE_EVALS_MAX  = {}", fit_params::FIT_RESIDUE_EVALS_MAX.to_string_beautiful());
+    println!("FIT_ALGORITHM_MIN_STEP = {:.2e}", fit_params::FIT_ALGORITHM_MIN_STEP);
 
     let deconvolve_results = DECONVOLUTION_SOLVER_TYPE.deconvolve(points_spectrum, points_instrument);
     dbg!(&deconvolve_results);
+    let deconvolve_results = deconvolve_results.unwrap();
+    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals.to_string_beautiful());
 
     let file_spectrum   = Path::new(filepathstr_spectrum);
     let file_instrument = Path::new(filepathstr_instrument);
@@ -63,9 +77,14 @@ fn main() {
     let mut file_output = File::create(filepath_output).unwrap();
 
     // TODO(refactor): `zip_exact`.
-    assert_eq!((1010..=1089).count(), deconvolve_results.as_ref().unwrap().points.iter().count());
-    for (x, point) in (1010..=1089).zip(deconvolve_results.unwrap().points) {
-        writeln!(file_output, "{x}\t{p}", p=point).unwrap();
+    // assert_eq!((1010..=1089).count(), deconvolve_results.points.len());
+    // for (x, point) in (1010..=1089).zip(deconvolve_results.points) {
+    //     writeln!(file_output, "{x}\t{p}", p=point).unwrap();
+    // }
+    use std::io::Write;
+    for i in 0..deconvolve_results.points.len() {
+        let point = deconvolve_results.points[i];
+        writeln!(file_output, "{i}\t{p}", p=point).unwrap();
     }
 }
 
@@ -110,12 +129,12 @@ impl DeconvolutionSolverType {
     }
 
     fn deconvolve_simple(points_spectrum: Vec<float>, points_instrument: Vec<float>) -> FitResultsOrError {
-        let residue_function = |params: &Vec<float>| -> float {
+        fn residue_function(params: &Vec<float>, points_spectrum: &Vec<f64>, points_instrument: &Vec<f64>) -> float {
             assert_eq!(points_spectrum.len(), params.len());
             let points_convolved = convolve(params, &points_instrument);
             fit_params::RESIDUAL_FUNCTION_TYPE.calc_diff(&points_spectrum, &points_convolved)
-        };
-        fit_params::FIT_ALGORITHM_TYPE.fit(points_spectrum.len(), residue_function)
+        }
+        fit_params::FIT_ALGORITHM_TYPE.fit(residue_function, points_spectrum, points_instrument)
     }
 
     #[allow(unused)]
@@ -163,7 +182,7 @@ impl DiffFunctionType {
 pub struct FitResults {
     pub points: Vec<float>,
     pub fit_residue: float,
-    pub fit_residue_evals: u32,
+    pub fit_residue_evals: u64,
 }
 // type FitResultsOrNone = Option<FitResults>;
 type FitResultsOrError = Result<FitResults, &'static str>;
@@ -173,103 +192,141 @@ pub enum FitAlgorithmType {
     DownhillSimplex,
 }
 impl FitAlgorithmType {
-    pub fn fit(&self, f_params_amount: usize, residue_function: impl Fn(&Vec<float>) -> float) -> FitResultsOrError {
+    pub fn fit(
+        &self,
+        residue_function: fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
+        points_spectrum  : Vec<float>,
+        points_instrument: Vec<float>,
+    ) -> FitResultsOrError {
         match &self {
-            FitAlgorithmType::PatternSearch   => Self::fit_by_pattern_search_algorithm  (f_params_amount, residue_function),
-            FitAlgorithmType::DownhillSimplex => Self::fit_by_downhill_simplex_algorithm(f_params_amount, residue_function),
+            FitAlgorithmType::PatternSearch   => Self::fit_by_pattern_search_algorithm  (residue_function, points_spectrum, points_instrument),
+            FitAlgorithmType::DownhillSimplex => Self::fit_by_downhill_simplex_algorithm(residue_function, points_spectrum, points_instrument),
         }
     }
 
-    fn fit_by_pattern_search_algorithm(f_params_amount: usize, residue_function: impl Fn(&Vec<float>) -> float) -> FitResultsOrError {
+    fn fit_by_pattern_search_algorithm(
+        residue_function: fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
+        points_spectrum  : Vec<float>,
+        points_instrument: Vec<float>,
+    ) -> FitResultsOrError {
         use crate::{fit_params::*, patter_search_params::*};
         const DEBUG: bool = false;
+
+        let f_params_amount: usize = points_spectrum.len();
+        if f_params_amount == 0 {
+            return Err("too few params");
+            // return None;
+        }
+
         type Params = Vec<float>;
         let mut params: Params = vec![INITIAL_VALUES; f_params_amount];
         let mut step: float = INITIAL_STEP;
-        let mut fit_residue_evals = 0;
-        if f_params_amount > 0 {
-            while step > FIT_ALGORITHM_MIN_STEP && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
-                if DEBUG {
-                    println!("params = {:#?}", params);
-                    println!("step = {}", step);
-                }
+        let mut fit_residue_evals: u64 = 0;
 
-                let res_at_current_params: float = residue_function(&params);
-                fit_residue_evals += 1;
-                if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
-                if !res_at_current_params.is_finite() { return Err("`res_at_current_params` isn't finite") }
-                // if !res_at_current_params.is_finite() { return None }
-
-                let mut residues_at_shifted_params = Vec::<float>::with_capacity(2 * f_params_amount);
-
-                for i in 0..params.len() {
-                    let mut params_new = params.clone();
-                    for delta in [-step, step] {
-                        let new_param_value = params_new[i] + delta;
-                        // if !new_param_value.is_finite() { return Err("`param.value + delta` isn't finite") }
-                        // TODO(optimization)?: remove `.is_finite()` check, bc it already will be "done" when calculating residue function.
-                        if !new_param_value.is_finite() || new_param_value < 0. {
-                            residues_at_shifted_params.push(float::NAN);
-                            continue;
-                        }
-                        let old_param_value = params_new[i];
-                        params_new[i] = new_param_value;
-                        let res = residue_function(&params_new);
-                        params_new[i] = old_param_value;
-                        fit_residue_evals += 1;
-                        residues_at_shifted_params.push(if res.is_finite() { res } else { float::NAN });
-                    }
-                }
-                if DEBUG { println!("res_at_shifted_params = {:?}", residues_at_shifted_params) }
-                assert_eq!(2 * f_params_amount, residues_at_shifted_params.len());
-                // if res_at_shifted_params.iter().any(|r| !r.is_finite()) { return Err(format!("one of `res_at_shifted_params` isn't finite")) }
-
-                match residues_at_shifted_params.index_of_min_with_ceil(res_at_current_params) {
-                    Some(index_of_min) => {
-                        if DEBUG { println!("INCREASE STEP") }
-                        let param_index = index_of_min as usize / 2;
-                        let delta = if index_of_min % 2 == 0 { -step } else { step };
-                        params[param_index] += delta;
-                        step *= ALPHA;
-                    }
-                    None => {
-                        if DEBUG { println!("DECREASE STEP") }
-                        step *= BETA;
-                    }
-                }
-
-                if DEBUG { println!("\n\n") }
+        while step > FIT_ALGORITHM_MIN_STEP && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
+            if DEBUG {
+                println!("params = {:#?}", params);
+                println!("step = {}", step);
             }
-            if fit_residue_evals >= FIT_RESIDUE_EVALS_MAX {
-                if DEBUG {
-                    println!("{}", "!".repeat(21));
-                    println!("HIT MAX_ITERS!!!");
-                    press_enter_to_continue();
-                }
-                return Err("hit max iters");
-                // return None;
-            }
-            if DEBUG { println!("finished in {} iters", fit_residue_evals) }
-            let fit_residue = residue_function(&params);
+
+            let res_at_current_params: float = residue_function(&params, &points_spectrum, &points_instrument);
             fit_residue_evals += 1;
-            Ok(FitResults {
-                points: params,
-                fit_residue,
-                fit_residue_evals,
-            })
+            if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
+            if !res_at_current_params.is_finite() { return Err("`res_at_current_params` isn't finite") }
+            // if !res_at_current_params.is_finite() { return None }
+
+            // let mut ress_at_shifted_params = Vec::<float>::with_capacity(2 * f_params_amount);
+            // for i in 0..params.len() {
+            //     let mut params_new = params.clone();
+            //     for delta in [-step, step] {
+            //         let param_new = params_new[i] + delta;
+            //         // if !param_new.is_finite() { return Err("`param.value + delta` isn't finite") }
+            //         // TODO(optimization)?: remove `.is_finite()` check, bc it already will be "done" when calculating residue function.
+            //         if !param_new.is_finite() || param_new < 0. {
+            //             ress_at_shifted_params.push(float::NAN);
+            //             continue;
+            //         }
+            //         let old_param_value = params_new[i];
+            //         params_new[i] = param_new;
+            //         let res = residue_function(&params_new);
+            //         params_new[i] = old_param_value;
+            //         fit_residue_evals += 1;
+            //         ress_at_shifted_params.push(if res.is_finite() { res } else { float::NAN });
+            //     }
+            // }
+
+            let (fit_residue_evals_extra, ress_at_shifted_params): (Vec<u64>, Vec<float>) =
+                (0..2*params.len())
+                    // .into_iter()
+                    .into_par_iter()
+                    .map(|i| -> (u64, float) {
+                        let delta = if i % 2 == 0 { -step } else { step };
+                        let param_new = params[i/2] + delta;
+                        // if !param_new.is_finite() { return Err("`param.value + delta` isn't finite") }
+                        // TODO(optimization)?: remove `.is_finite()` check, bc it already will be "done" when calculating residue function.
+                        if !param_new.is_finite() || param_new < 0. {
+                            (0, float::NAN)
+                        } else {
+                            let mut params_new = params.clone();
+                            params_new[i/2] = param_new;
+                            let res = residue_function(&params_new, &points_spectrum, &points_instrument);
+                            (1, if res.is_finite() { res } else { float::NAN })
+                        }
+                        // returns tuple of `residue_function_evals` and `residue_result`.
+                    })
+                    .unzip();
+            fit_residue_evals += fit_residue_evals_extra.iter().sum::<u64>();
+
+            if DEBUG { println!("res_at_shifted_params = {:?}", ress_at_shifted_params) }
+            assert_eq!(2 * f_params_amount, ress_at_shifted_params.len());
+            // if res_at_shifted_params.iter().any(|r| !r.is_finite()) { return Err(format!("one of `res_at_shifted_params` isn't finite")) }
+
+            match ress_at_shifted_params.index_of_min_with_ceil(res_at_current_params) {
+                Some(index_of_min) => {
+                    if DEBUG { println!("INCREASE STEP") }
+                    let param_index = index_of_min as usize / 2;
+                    let delta = if index_of_min % 2 == 0 { -step } else { step };
+                    params[param_index] += delta;
+                    step *= ALPHA;
+                }
+                None => {
+                    if DEBUG { println!("DECREASE STEP") }
+                    step *= BETA;
+                }
+            }
+
+            if DEBUG { println!("\n\n") }
         }
-        else {
-            Err("too few params")
-            // None
+        if fit_residue_evals >= FIT_RESIDUE_EVALS_MAX {
+            if DEBUG {
+                println!("{}", "!".repeat(21));
+                println!("HIT MAX_ITERS!!!");
+                press_enter_to_continue();
+            }
+            return Err("hit max iters");
+            // return None;
         }
+        if DEBUG { println!("finished in {} iters", fit_residue_evals) }
+        let fit_residue = residue_function(&params, &points_spectrum, &points_instrument);
+        fit_residue_evals += 1;
+        Ok(FitResults {
+            points: params,
+            fit_residue,
+            fit_residue_evals,
+        })
     }
 
 
-    fn fit_by_downhill_simplex_algorithm(f_params_amount: usize, residue_function: impl Fn(&Vec<float>) -> float) -> FitResultsOrError {
+    fn fit_by_downhill_simplex_algorithm(
+        residue_function: fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
+        points_spectrum  : Vec<float>,
+        points_instrument: Vec<float>,
+    ) -> FitResultsOrError {
         use crate::{downhill_simplex_params::*, fit_params::*};
         const DEBUG: bool = false;
         const LERP_TS: [float; 15] = [0.5, 0.45, 0.55, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.1, 0.9, 0.01, 0.99, 0.001, 0.999];
 
+        let f_params_amount: usize = points_spectrum.len();
         if f_params_amount == 0 {
             return Err("too few params");
             // return None;
@@ -326,7 +383,7 @@ impl FitAlgorithmType {
             }
         }
         let mut params_and_ress_vec_push = |params: Params| {
-            let fit_residue = residue_function(&params);
+            let fit_residue = residue_function(&params, &points_spectrum, &points_instrument);
             fit_residue_evals += 1;
             params_and_ress_vec.push((params, fit_residue));
         };
@@ -351,7 +408,7 @@ impl FitAlgorithmType {
             let params_symmetric = params_max.clone().mirror_relative_to(params_other.clone());
             let value_at_params_symmetric = if params_symmetric.is_all_positive() {
                 fit_residue_evals += 1;
-                residue_function(&params_symmetric)
+                residue_function(&params_symmetric, &points_spectrum, &points_instrument)
             } else {
                 float::NAN
             };
@@ -365,7 +422,7 @@ impl FitAlgorithmType {
                     let params_lerp = params_max.clone().lerp(params_other.clone().avg(), lerp_t);
                     let value_at_params_lerp = if params_lerp.is_all_positive() {
                         fit_residue_evals += 1;
-                        residue_function(&params_lerp)
+                        residue_function(&params_lerp, &points_spectrum, &points_instrument)
                     } else {
                         float::NAN
                     };
@@ -392,7 +449,7 @@ impl FitAlgorithmType {
             // return None;
         }
         let points = params_and_ress_vec.get_params().avg();
-        let fit_residue = residue_function(&points);
+        let fit_residue = residue_function(&points, &points_spectrum, &points_instrument);
         fit_residue_evals += 1;
         Ok(FitResults {
             points,
@@ -412,8 +469,9 @@ pub fn load_data_y(filename: &str) -> Vec<float> {
         let line = line.unwrap();
         let line = line.trim();
         if line == "" { continue }
-        let (_, y) = line.split_once(' ').unwrap();
+        let (_, y) = line.split_once(&[' ', '\t']).unwrap();
         let y = y.trim();
+        let y = y.replace(",", ".");
         let y = y.parse().unwrap();
         points.push(y);
     }
@@ -578,6 +636,39 @@ impl Avg<Vec<float>> for Vec<Vec<float>> {
 }
 
 
+pub trait ExtStringSeparateChunks {
+    fn separate_chunks_from_end(&self, delimiter: impl ToString, chunks_size: usize) -> String;
+}
+impl ExtStringSeparateChunks for String {
+    fn separate_chunks_from_end(&self, delimiter: impl ToString, chunks_size: usize) -> String {
+        let len = self.len();
+        self.chars()
+            // .rev()
+            // .enumerate()
+            // .map(|(i, c)| if len-i % chunks_size != 0 { c.to_string() } else { format!("{}{}", delimiter.to_string(), c) })
+            // .rev()
+            .enumerate()
+            .map(|(i, c)| if (len-i) % chunks_size != 0 || i == 0 { c.to_string() } else { format!("{}{}", delimiter.to_string(), c) })
+            .collect()
+    }
+}
+impl ExtStringSeparateChunks for &str {
+    fn separate_chunks_from_end(&self, delimiter: impl ToString, chunks_size: usize) -> String {
+        self.to_string().separate_chunks_from_end(delimiter, chunks_size)
+    }
+}
+
+pub trait ToStringBeautiful {
+    fn to_string_beautiful(&self) -> String;
+}
+
+impl ToStringBeautiful for u64 {
+    fn to_string_beautiful(&self) -> String {
+        self.to_string().separate_chunks_from_end("_", 3)
+    }
+}
+
+
 
 pub fn press_enter_to_continue() {
     print("PRESS ENTER TO CONTINUE.");
@@ -591,8 +682,12 @@ pub fn wait_for_enter() {
 }
 
 pub fn print(msg: impl ToString) {
-    use std::io::{Write, stdout};
     print!("{}", msg.to_string());
+    flush();
+}
+
+pub fn flush() {
+    use std::io::{Write, stdout};
     stdout().flush().unwrap();
 }
 
@@ -602,6 +697,30 @@ pub fn print(msg: impl ToString) {
 
 #[cfg(test)]
 mod tests {
+
+    mod separate_chunks_from_end {
+        use super::super::*;
+        #[test]
+        fn _a() {
+            assert_eq!("a", "a".separate_chunks_from_end("_-", 3));
+        }
+        #[test]
+        fn _ab() {
+            assert_eq!("ab", "ab".separate_chunks_from_end("_-", 3));
+        }
+        #[test]
+        fn _abc() {
+            assert_eq!("abc", "abc".separate_chunks_from_end("_-", 3));
+        }
+        #[test]
+        fn _a_bcd() {
+            assert_eq!("a_-bcd", "abcd".separate_chunks_from_end("_-", 3));
+        }
+        #[test]
+        fn _abcdefghijklmnopqrstuvwxyz() {
+            assert_eq!("ab_-cde_-fgh_-ijk_-lmn_-opq_-rst_-uvw_-xyz", "abcdefghijklmnopqrstuvwxyz".separate_chunks_from_end("_-", 3));
+        }
+    }
 
     mod index_of {
         mod min {
