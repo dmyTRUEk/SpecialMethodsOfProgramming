@@ -2,7 +2,7 @@
 
 #![feature(box_patterns)]
 
-use std::time::Instant;
+use std::{env, time::Instant};
 
 use rand::{thread_rng, Rng};
 
@@ -26,8 +26,6 @@ use crate::{
     points::{ImplPoints, Points},
 };
 
-
-const FILENAME: &str = "./data/fit_Dm_4.dat";
 
 const CUSTOM_FUNCTION_FIT: bool = false;
 
@@ -66,13 +64,21 @@ const FIT_RESIDUE_THRESHOLD: float = float::INFINITY;
 
 
 fn main() {
-    // fit_custom();
+    let args: Vec<_> = env::args().collect();
+    let filename: &str = match &args[..] {
+        [_, filename] => filename,
+        [_] => panic!("Filename not provided."),
+        [] => panic!("Unexpected CLI args number."),
+        _ => panic!("Too many CLI args.")
+    };
+
+    // fit_custom(filename);
     // return;
 
     // benchmark_fit();
     // return;
 
-    let points = Points::load_from_file(FILENAME);
+    let points = Points::load_from_file(filename);
 
     let mut rng = thread_rng();
     let mut best_f_and_res: (FunctionAndParams, float) = (FunctionAndParams::gen_random_params_from_function(Function::X), FIT_RESIDUE_THRESHOLD);
@@ -157,10 +163,10 @@ fn main() {
 
 
 #[allow(dead_code)]
-fn fit_custom() {
-    let points = Points::load_from_file(FILENAME);
+fn fit_custom(filename: &str) {
+    let points = Points::load_from_file(filename);
 
-    let mut f = match FILENAME {
+    let mut f = match filename {
         "./data/fit_Dm_1.dat" => FunctionAndParams::new(
             Function::from_str("h + a*exp(k*(x-m))").unwrap(),
             Params::from_array([
@@ -253,8 +259,8 @@ fn print_stats(funcs_generated: u64, funcs_fitted: u64, time_begin: Instant) {
 
 
 #[allow(dead_code)]
-fn benchmark_fit() {
-    let points = Points::load_from_file(FILENAME);
+fn benchmark_fit(filename: &str) {
+    let points = Points::load_from_file(filename);
     // println!("{:#?}", points);
 
     let params = Params::from_array([
