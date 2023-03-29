@@ -120,8 +120,8 @@ impl Function {
                     RB => brackets_level -= 1,
                     PLUS if brackets_level == 0 => {
                         return Ok(Self::Add {
-                            lhs: box Self::from_str(&string[..i]).unwrap(),
-                            rhs: box Self::from_str(&string[i+1..]).unwrap()
+                            lhs: Box::new(Self::from_str(&string[..i]).unwrap()),
+                            rhs: Box::new(Self::from_str(&string[i+1..]).unwrap())
                         });
                     }
                     _ => {}
@@ -135,8 +135,8 @@ impl Function {
                     RB => brackets_level -= 1,
                     MINUS if brackets_level == 0 && i != 0 => {
                         return Ok(Self::Sub {
-                            lhs: box Self::from_str(&string[..i]).unwrap(),
-                            rhs: box Self::from_str(&string[i+1..]).unwrap()
+                            lhs: Box::new(Self::from_str(&string[..i]).unwrap()),
+                            rhs: Box::new(Self::from_str(&string[i+1..]).unwrap())
                         });
                     }
                     _ => {}
@@ -144,7 +144,7 @@ impl Function {
             }
 
             // NEG must be before POWER (for `-x^2` to work) but after MINUS (for `-a+b` to work).
-            if string.starts_with(MINUS) { return Ok(Self::Neg { value: box Self::from_str(&string[1..])? }) }
+            if string.starts_with(MINUS) { return Ok(Self::Neg { value: Box::new(Self::from_str(&string[1..])?) }) }
 
             // "split" by MULTIPLY
             let mut brackets_level: i32 = 0;
@@ -154,8 +154,8 @@ impl Function {
                     RB => brackets_level -= 1,
                     MULTIPLY if brackets_level == 0 => {
                         return Ok(Self::Mul {
-                            lhs: box Self::from_str(&string[..i]).unwrap(),
-                            rhs: box Self::from_str(&string[i+1..]).unwrap()
+                            lhs: Box::new(Self::from_str(&string[..i]).unwrap()),
+                            rhs: Box::new(Self::from_str(&string[i+1..]).unwrap())
                         });
                     }
                     _ => {}
@@ -169,8 +169,8 @@ impl Function {
                     RB => brackets_level -= 1,
                     DIVIDE if brackets_level == 0 => {
                         return Ok(Self::Div {
-                            lhs: box Self::from_str(&string[..i]).unwrap(),
-                            rhs: box Self::from_str(&string[i+1..]).unwrap()
+                            lhs: Box::new(Self::from_str(&string[..i]).unwrap()),
+                            rhs: Box::new(Self::from_str(&string[i+1..]).unwrap())
                         });
                     }
                     _ => {}
@@ -183,8 +183,8 @@ impl Function {
                     LB => brackets_level += 1,
                     RB => brackets_level -= 1,
                     POWER if brackets_level == 0 => {
-                        let lhs = box Self::from_str(&string[..i]).unwrap();
-                        let rhs = box Self::from_str(&string[i+1..]).unwrap();
+                        let lhs = Box::new(Self::from_str(&string[..i]).unwrap());
+                        let rhs = Box::new(Self::from_str(&string[i+1..]).unwrap());
                         return Ok(
                             if *rhs == (Function::Const { value: 2. }) {
                                 Self::Sq { value: lhs }
@@ -211,13 +211,13 @@ impl Function {
             }
         }
 
-        if string.starts_with("exp(") && string.ends_with(RB) { return Ok(Self::Exp { value: box Self::from_str(&string[4..len-1])? }) }
-        if string.starts_with("ln(")  && string.ends_with(RB) { return Ok(Self::Ln  { value: box Self::from_str(&string[3..len-1])? }) }
-        if string.starts_with("sqrt(")&& string.ends_with(RB) { return Ok(Self::Sqrt{ value: box Self::from_str(&string[5..len-1])? }) }
-        if string.ends_with("^2")                             { return Ok(Self::Sq  { value: box Self::from_str(&string[0..len-2])? }) }
-        if string.starts_with("sin(") && string.ends_with(RB) { return Ok(Self::Sin { value: box Self::from_str(&string[4..len-1])? }) }
-        if string.starts_with("cos(") && string.ends_with(RB) { return Ok(Self::Cos { value: box Self::from_str(&string[4..len-1])? }) }
-        if string.starts_with("tan(") && string.ends_with(RB) { return Ok(Self::Tan { value: box Self::from_str(&string[4..len-1])? }) }
+        if string.starts_with("exp(") && string.ends_with(RB) { return Ok(Self::Exp { value: Box::new(Self::from_str(&string[4..len-1])?) }) }
+        if string.starts_with("ln(")  && string.ends_with(RB) { return Ok(Self::Ln  { value: Box::new(Self::from_str(&string[3..len-1])?) }) }
+        if string.starts_with("sqrt(")&& string.ends_with(RB) { return Ok(Self::Sqrt{ value: Box::new(Self::from_str(&string[5..len-1])?) }) }
+        if string.ends_with("^2")                             { return Ok(Self::Sq  { value: Box::new(Self::from_str(&string[0..len-2])?) }) }
+        if string.starts_with("sin(") && string.ends_with(RB) { return Ok(Self::Sin { value: Box::new(Self::from_str(&string[4..len-1])?) }) }
+        if string.starts_with("cos(") && string.ends_with(RB) { return Ok(Self::Cos { value: Box::new(Self::from_str(&string[4..len-1])?) }) }
+        if string.starts_with("tan(") && string.ends_with(RB) { return Ok(Self::Tan { value: Box::new(Self::from_str(&string[4..len-1])?) }) }
 
         Err("Unable to parse.".to_string())
     }
@@ -241,22 +241,22 @@ impl Function {
                 let complexity = complexity - 1;
                 let partition = rng.gen_range(0 ..= complexity);
                 match rng.gen_range(0 ..= 12) {
-                    0 => Self::Neg { value: box Self::gen(complexity) },
+                    0 => Self::Neg { value: Box::new(Self::gen(complexity)) },
 
-                    1 => Self::Exp { value: box Self::gen(complexity) },
-                    2 => Self::Ln  { value: box Self::gen(complexity) },
-                    3 => Self::Sqrt{ value: box Self::gen(complexity) },
-                    4 => Self::Sq  { value: box Self::gen(complexity) },
+                    1 => Self::Exp { value: Box::new(Self::gen(complexity)) },
+                    2 => Self::Ln  { value: Box::new(Self::gen(complexity)) },
+                    3 => Self::Sqrt{ value: Box::new(Self::gen(complexity)) },
+                    4 => Self::Sq  { value: Box::new(Self::gen(complexity)) },
 
-                    5 => Self::Sin { value: box Self::gen(complexity) },
-                    6 => Self::Cos { value: box Self::gen(complexity) },
-                    7 => Self::Tan { value: box Self::gen(complexity) },
+                    5 => Self::Sin { value: Box::new(Self::gen(complexity)) },
+                    6 => Self::Cos { value: Box::new(Self::gen(complexity)) },
+                    7 => Self::Tan { value: Box::new(Self::gen(complexity)) },
 
-                    8 => Self::Add { lhs: box Self::gen(partition), rhs: box Self::gen(complexity-partition) },
-                    9 => Self::Sub { lhs: box Self::gen(partition), rhs: box Self::gen(complexity-partition) },
-                    10 => Self::Mul { lhs: box Self::gen(partition), rhs: box Self::gen(complexity-partition) },
-                    11 => Self::Div { lhs: box Self::gen(partition), rhs: box Self::gen(complexity-partition) },
-                    12 => Self::Pow { lhs: box Self::gen(partition), rhs: box Self::gen(complexity-partition) },
+                    8  => Self::Add { lhs: Box::new(Self::gen(partition)), rhs: Box::new(Self::gen(complexity-partition)) },
+                    9  => Self::Sub { lhs: Box::new(Self::gen(partition)), rhs: Box::new(Self::gen(complexity-partition)) },
+                    10 => Self::Mul { lhs: Box::new(Self::gen(partition)), rhs: Box::new(Self::gen(complexity-partition)) },
+                    11 => Self::Div { lhs: Box::new(Self::gen(partition)), rhs: Box::new(Self::gen(complexity-partition)) },
+                    12 => Self::Pow { lhs: Box::new(Self::gen(partition)), rhs: Box::new(Self::gen(complexity-partition)) },
                     _ => unreachable!()
                 }
             }
@@ -369,22 +369,22 @@ impl Function {
             => s,
 
             // recursive:
-            Self::Neg { value } => Self::Neg { value: box value.simplify() },
+            Self::Neg { value } => Self::Neg { value: Box::new(value.simplify()) },
 
-            Self::Exp { value } => Self::Exp { value: box value.simplify() },
-            Self::Ln  { value } => Self::Ln  { value: box value.simplify() },
-            Self::Sqrt{ value } => Self::Sqrt{ value: box value.simplify() },
-            Self::Sq  { value } => Self::Sq  { value: box value.simplify() },
+            Self::Exp { value } => Self::Exp { value: Box::new(value.simplify()) },
+            Self::Ln  { value } => Self::Ln  { value: Box::new(value.simplify()) },
+            Self::Sqrt{ value } => Self::Sqrt{ value: Box::new(value.simplify()) },
 
-            Self::Sin { value } => Self::Sin { value: box value.simplify() },
-            Self::Cos { value } => Self::Cos { value: box value.simplify() },
-            Self::Tan { value } => Self::Tan { value: box value.simplify() },
+            Self::Sq  { value } => Self::Sq  { value: Box::new(value.simplify()) },
+            Self::Sin { value } => Self::Sin { value: Box::new(value.simplify()) },
+            Self::Cos { value } => Self::Cos { value: Box::new(value.simplify()) },
+            Self::Tan { value } => Self::Tan { value: Box::new(value.simplify()) },
 
-            Self::Add { lhs, rhs } => Self::Add { lhs: box lhs.simplify(), rhs: box rhs.simplify() },
-            Self::Sub { lhs, rhs } => Self::Sub { lhs: box lhs.simplify(), rhs: box rhs.simplify() },
-            Self::Mul { lhs, rhs } => Self::Mul { lhs: box lhs.simplify(), rhs: box rhs.simplify() },
-            Self::Div { lhs, rhs } => Self::Div { lhs: box lhs.simplify(), rhs: box rhs.simplify() },
-            Self::Pow { lhs, rhs } => Self::Pow { lhs: box lhs.simplify(), rhs: box rhs.simplify() },
+            Self::Add { lhs, rhs } => Self::Add { lhs: Box::new(lhs.simplify()), rhs: Box::new(rhs.simplify()) },
+            Self::Sub { lhs, rhs } => Self::Sub { lhs: Box::new(lhs.simplify()), rhs: Box::new(rhs.simplify()) },
+            Self::Mul { lhs, rhs } => Self::Mul { lhs: Box::new(lhs.simplify()), rhs: Box::new(rhs.simplify()) },
+            Self::Div { lhs, rhs } => Self::Div { lhs: Box::new(lhs.simplify()), rhs: Box::new(rhs.simplify()) },
+            Self::Pow { lhs, rhs } => Self::Pow { lhs: Box::new(lhs.simplify()), rhs: Box::new(rhs.simplify()) },
         };
         if DEBUG { println!("simplify::middle: {:?}", new_f) }
         new_f = match new_f {
@@ -563,9 +563,9 @@ mod tests {
             assert_eq!(
                 Function::X,
                 Function::Neg {
-                    value: box Function::Neg {
-                        value: box Function::X
-                    }
+                    value: Box::new(Function::Neg {
+                        value: Box::new(Function::X)
+                    })
                 }.simplify()
             );
         }
@@ -574,13 +574,13 @@ mod tests {
             assert_eq!(
                 Function::X,
                 Function::Neg {
-                    value: box Function::Neg {
-                        value: box Function::Neg {
-                            value: box Function::Neg {
-                                value: box Function::X
-                            }
-                        }
-                    }
+                    value: Box::new(Function::Neg {
+                        value: Box::new(Function::Neg {
+                            value: Box::new(Function::Neg {
+                                value: Box::new(Function::X)
+                            })
+                        })
+                    })
                 }.simplify()
             );
         }
@@ -589,17 +589,17 @@ mod tests {
             assert_eq!(
                 Function::X,
                 Function::Neg {
-                    value: box Function::Neg {
-                        value: box Function::Neg {
-                            value: box Function::Neg {
-                                value: box Function::Neg {
-                                    value: box Function::Neg {
-                                        value: box Function::X
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    value: Box::new(Function::Neg {
+                        value: Box::new(Function::Neg {
+                            value: Box::new(Function::Neg {
+                                value: Box::new(Function::Neg {
+                                    value: Box::new(Function::Neg {
+                                        value: Box::new(Function::X)
+                                    })
+                                })
+                            })
+                        })
+                    })
                 }.simplify()
             );
         }
@@ -607,14 +607,14 @@ mod tests {
         fn exp_neg_neg_x() {
             assert_eq!(
                 Function::Exp {
-                    value: box Function::X
+                    value: Box::new(Function::X)
                 },
                 Function::Exp {
-                    value: box Function::Neg {
-                        value: box Function::Neg {
-                            value: box Function::X
-                        }
-                    }
+                    value: Box::new(Function::Neg {
+                        value: Box::new(Function::Neg {
+                            value: Box::new(Function::X)
+                        })
+                    })
                 }.simplify()
             );
         }
@@ -625,9 +625,9 @@ mod tests {
                     value: 2.718281828459045,
                 },
                 Function::Exp {
-                    value: box Function::Exp {
-                        value: box Function::Const { value: 0. }
-                    }
+                    value: Box::new(Function::Exp {
+                        value: Box::new(Function::Const { value: 0. })
+                    })
                 }.simplify()
             );
         }
@@ -635,10 +635,10 @@ mod tests {
         #[test]
         fn x_x() {
             assert_eq!(
-                Function::Sq { value: box Function::X },
+                Function::Sq { value: Box::new(Function::X) },
                 Function::Mul {
-                    lhs: box Function::X,
-                    rhs: box Function::X
+                    lhs: Box::new(Function::X),
+                    rhs: Box::new(Function::X)
                 }.simplify()
             );
         }
@@ -688,63 +688,63 @@ mod tests {
         #[test]
         fn neg() {
             assert_eq!(
-                Ok(Function::Neg { value: box Function::X }),
+                Ok(Function::Neg { value: Box::new(Function::X) }),
                 Function::from_str("-x")
             );
         }
         #[test]
         fn exp() {
             assert_eq!(
-                Ok(Function::Exp { value: box Function::X }),
+                Ok(Function::Exp { value: Box::new(Function::X) }),
                 Function::from_str("exp(x)")
             );
         }
         #[test]
         fn ln() {
             assert_eq!(
-                Ok(Function::Ln { value: box Function::X }),
+                Ok(Function::Ln { value: Box::new(Function::X) }),
                 Function::from_str("ln(x)")
             );
         }
         #[test]
         fn sqrt() {
             assert_eq!(
-                Ok(Function::Sqrt { value: box Function::X }),
+                Ok(Function::Sqrt { value: Box::new(Function::X) }),
                 Function::from_str("sqrt(x)")
             );
         }
         #[test]
         fn sq() {
             assert_eq!(
-                Ok(Function::Sq { value: box Function::X }),
+                Ok(Function::Sq { value: Box::new(Function::X) }),
                 Function::from_str("x^2")
             );
         }
         #[test]
         fn sq_with_brackets() {
             assert_eq!(
-                Ok(Function::Sq { value: box Function::X }),
+                Ok(Function::Sq { value: Box::new(Function::X) }),
                 Function::from_str("(x)^2")
             );
         }
         #[test]
         fn sin() {
             assert_eq!(
-                Ok(Function::Sin { value: box Function::X }),
+                Ok(Function::Sin { value: Box::new(Function::X) }),
                 Function::from_str("sin(x)")
             );
         }
         #[test]
         fn cos() {
             assert_eq!(
-                Ok(Function::Cos { value: box Function::X }),
+                Ok(Function::Cos { value: Box::new(Function::X) }),
                 Function::from_str("cos(x)")
             );
         }
         #[test]
         fn tan() {
             assert_eq!(
-                Ok(Function::Tan { value: box Function::X }),
+                Ok(Function::Tan { value: Box::new(Function::X) }),
                 Function::from_str("tan(x)")
             );
         }
@@ -753,8 +753,8 @@ mod tests {
         fn add() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::X,
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::X),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("x + 3.14")
             );
@@ -763,8 +763,8 @@ mod tests {
         fn sub() {
             assert_eq!(
                 Ok(Function::Sub {
-                    lhs: box Function::X,
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::X),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("x - 3.14")
             );
@@ -773,8 +773,8 @@ mod tests {
         fn mul() {
             assert_eq!(
                 Ok(Function::Mul {
-                    lhs: box Function::X,
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::X),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("x * 3.14")
             );
@@ -783,8 +783,8 @@ mod tests {
         fn div() {
             assert_eq!(
                 Ok(Function::Div {
-                    lhs: box Function::X,
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::X),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("x / 3.14")
             );
@@ -793,8 +793,8 @@ mod tests {
         fn pow() {
             assert_eq!(
                 Ok(Function::Pow {
-                    lhs: box Function::X,
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::X),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("x ^ 3.14")
             );
@@ -804,9 +804,9 @@ mod tests {
         fn operations_neg_x_sq() {
             assert_eq!(
                 Ok(Function::Neg {
-                    value: box Function::Sq {
-                        value: box Function::X
-                    }
+                    value: Box::new(Function::Sq {
+                        value: Box::new(Function::X)
+                    })
                 }),
                 Function::from_str("-x^2")
             );
@@ -815,9 +815,9 @@ mod tests {
         fn operations_neg_lb_x_rb_sq() {
             assert_eq!(
                 Ok(Function::Neg {
-                    value: box Function::Sq {
-                        value: box Function::X
-                    }
+                    value: Box::new(Function::Sq {
+                        value: Box::new(Function::X)
+                    })
                 }),
                 Function::from_str("-(x)^2")
             );
@@ -826,9 +826,9 @@ mod tests {
         fn operations_lb_neg_x_rb_sq() {
             assert_eq!(
                 Ok(Function::Sq {
-                    value: box Function::Neg {
-                        value: box Function::X
-                    }
+                    value: Box::new(Function::Neg {
+                        value: Box::new(Function::X)
+                    })
                 }),
                 Function::from_str("(-x)^2")
             );
@@ -837,10 +837,10 @@ mod tests {
         fn operations_neg_a_add_b() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Neg {
-                        value: box Function::Param { name: 'a' }
-                    },
-                    rhs: box Function::Param { name: 'b' }
+                    lhs: Box::new(Function::Neg {
+                        value: Box::new(Function::Param { name: 'a' })
+                    }),
+                    rhs: Box::new(Function::Param { name: 'b' })
                 }),
                 Function::from_str("-a+b")
             );
@@ -849,14 +849,14 @@ mod tests {
         fn operations_neg_sin_a_add_cos_b() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Neg {
-                        value: box Function::Sin {
-                            value: box Function::Param { name: 'a' }
-                        }
-                    },
-                    rhs: box Function::Cos {
-                        value: box Function::Param { name: 'b' }
-                    }
+                    lhs: Box::new(Function::Neg {
+                        value: Box::new(Function::Sin {
+                            value: Box::new(Function::Param { name: 'a' })
+                        })
+                    }),
+                    rhs: Box::new(Function::Cos {
+                        value: Box::new(Function::Param { name: 'b' })
+                    })
                 }),
                 Function::from_str("-sin(a)+cos(b)")
             );
@@ -865,10 +865,10 @@ mod tests {
         fn operations_neg_a_mul_b() {
             assert_eq!(
                 Ok(Function::Neg {
-                    value: box Function::Mul {
-                        lhs: box Function::Param { name: 'a' },
-                        rhs: box Function::Param { name: 'b' }
-                    }
+                    value: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Param { name: 'a' }),
+                        rhs: Box::new(Function::Param { name: 'b' })
+                    })
                 }),
                 Function::from_str("-a*b")
             );
@@ -877,11 +877,11 @@ mod tests {
         fn operations_order_add_mul() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Const { value: 145. },
-                    rhs: box Function::Mul {
-                        lhs: box Function::Const { value: 42. },
-                        rhs: box Function::Const { value: 3.14 }
-                    }
+                    lhs: Box::new(Function::Const { value: 145. }),
+                    rhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 42. }),
+                        rhs: Box::new(Function::Const { value: 3.14 })
+                    })
                 }),
                 Function::from_str("145 + 42 * 3.14")
             );
@@ -890,11 +890,11 @@ mod tests {
         fn operations_order_mul_add() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Mul {
-                        lhs: box Function::Const { value: 145. },
-                        rhs: box Function::Const { value: 42. }
-                    },
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 145. }),
+                        rhs: Box::new(Function::Const { value: 42. })
+                    }),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("145 * 42 + 3.14")
             );
@@ -903,11 +903,11 @@ mod tests {
         fn operations_order_lb_add_rb_mul() {
             assert_eq!(
                 Ok(Function::Mul {
-                    lhs: box Function::Add {
-                        lhs: box Function::Const { value: 145. },
-                        rhs: box Function::Const { value: 42. }
-                    },
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::Add {
+                        lhs: Box::new(Function::Const { value: 145. }),
+                        rhs: Box::new(Function::Const { value: 42. })
+                    }),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("(145 + 42) * 3.14")
             );
@@ -916,11 +916,11 @@ mod tests {
         fn operations_order_add_lb_mul_rb() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Const { value: 145. },
-                    rhs: box Function::Mul {
-                        lhs: box Function::Const { value: 42. },
-                        rhs: box Function::Const { value: 3.14 }
-                    }
+                    lhs: Box::new(Function::Const { value: 145. }),
+                    rhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 42. }),
+                        rhs: Box::new(Function::Const { value: 3.14 })
+                    })
                 }),
                 Function::from_str("145 + (42 * 3.14)")
             );
@@ -929,11 +929,11 @@ mod tests {
         fn operations_order_lb_mul_rb_add() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Mul {
-                        lhs: box Function::Const { value: 145. },
-                        rhs: box Function::Const { value: 42. }
-                    },
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 145. }),
+                        rhs: Box::new(Function::Const { value: 42. })
+                    }),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("(145 * 42) + 3.14")
             );
@@ -942,11 +942,11 @@ mod tests {
         fn operations_order_mul_lb_add_rb() {
             assert_eq!(
                 Ok(Function::Mul {
-                    lhs: box Function::Const { value: 145. },
-                    rhs: box Function::Add {
-                        lhs: box Function::Const { value: 42. },
-                        rhs: box Function::Const { value: 3.14 }
-                    }
+                    lhs: Box::new(Function::Const { value: 145. }),
+                    rhs: Box::new(Function::Add {
+                        lhs: Box::new(Function::Const { value: 42. }),
+                        rhs: Box::new(Function::Const { value: 3.14 })
+                    })
                 }),
                 Function::from_str("145 * (42 + 3.14)")
             );
@@ -955,11 +955,11 @@ mod tests {
         fn operations_order_sub_sub() {
             assert_eq!(
                 Ok(Function::Sub {
-                    lhs: box Function::Sub {
-                        lhs: box Function::Const { value: 145. },
-                        rhs: box Function::Const { value: 42. }
-                    },
-                    rhs: box Function::Const { value: 3.14 }
+                    lhs: Box::new(Function::Sub {
+                        lhs: Box::new(Function::Const { value: 145. }),
+                        rhs: Box::new(Function::Const { value: 42. })
+                    }),
+                    rhs: Box::new(Function::Const { value: 3.14 })
                 }),
                 Function::from_str("145 - 42 - 3.14")
             );
@@ -968,14 +968,14 @@ mod tests {
         fn operations_order_add_mul_pow() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Const { value: 145. },
-                    rhs: box Function::Mul {
-                        lhs: box Function::Const { value: 42. },
-                        rhs: box Function::Pow {
-                            lhs: box Function::Const { value: 3.14 },
-                            rhs: box Function::Const { value: 2.71 }
-                        }
-                    },
+                    lhs: Box::new(Function::Const { value: 145. }),
+                    rhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 42. }),
+                        rhs: Box::new(Function::Pow {
+                            lhs: Box::new(Function::Const { value: 3.14 }),
+                            rhs: Box::new(Function::Const { value: 2.71 })
+                        })
+                    }),
                 }),
                 Function::from_str("145 + 42 * 3.14 ^ 2.71")
             );
@@ -984,14 +984,14 @@ mod tests {
         fn operations_order_add_pow_mul() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Const { value: 145. },
-                    rhs: box Function::Mul {
-                        lhs: box Function::Pow {
-                            lhs: box Function::Const { value: 42. },
-                            rhs: box Function::Const { value: 3.14 }
-                        },
-                        rhs: box Function::Const { value: 2.71 }
-                    },
+                    lhs: Box::new(Function::Const { value: 145. }),
+                    rhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Pow {
+                            lhs: Box::new(Function::Const { value: 42. }),
+                            rhs: Box::new(Function::Const { value: 3.14 })
+                        }),
+                        rhs: Box::new(Function::Const { value: 2.71 })
+                    }),
                 }),
                 Function::from_str("145 + 42 ^ 3.14 * 2.71")
             );
@@ -1000,14 +1000,14 @@ mod tests {
         fn operations_order_mul_add_pow() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Mul {
-                        lhs: box Function::Const { value: 145. },
-                        rhs: box Function::Const { value: 42. }
-                    },
-                    rhs: box Function::Pow {
-                        lhs: box Function::Const { value: 3.14 },
-                        rhs: box Function::Const { value: 2.71 }
-                    }
+                    lhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 145. }),
+                        rhs: Box::new(Function::Const { value: 42. })
+                    }),
+                    rhs: Box::new(Function::Pow {
+                        lhs: Box::new(Function::Const { value: 3.14 }),
+                        rhs: Box::new(Function::Const { value: 2.71 })
+                    })
                 }),
                 Function::from_str("145 * 42 + 3.14 ^ 2.71")
             );
@@ -1016,14 +1016,14 @@ mod tests {
         fn operations_order_mul_pow_add() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Mul {
-                        lhs: box Function::Const { value: 145. },
-                        rhs: box Function::Pow {
-                            lhs: box Function::Const { value: 42. },
-                            rhs: box Function::Const { value: 3.14 }
-                        }
-                    },
-                    rhs: box Function::Const { value: 2.71 },
+                    lhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 145. }),
+                        rhs: Box::new(Function::Pow {
+                            lhs: Box::new(Function::Const { value: 42. }),
+                            rhs: Box::new(Function::Const { value: 3.14 })
+                        })
+                    }),
+                    rhs: Box::new(Function::Const { value: 2.71 }),
                 }),
                 Function::from_str("145 * 42 ^ 3.14 + 2.71")
             );
@@ -1032,14 +1032,14 @@ mod tests {
         fn operations_order_pow_add_mul() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Pow {
-                        lhs: box Function::Const { value: 145. },
-                        rhs: box Function::Const { value: 42. }
-                    },
-                    rhs: box Function::Mul {
-                        lhs: box Function::Const { value: 3.14 },
-                        rhs: box Function::Const { value: 2.71 }
-                    }
+                    lhs: Box::new(Function::Pow {
+                        lhs: Box::new(Function::Const { value: 145. }),
+                        rhs: Box::new(Function::Const { value: 42. })
+                    }),
+                    rhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Const { value: 3.14 }),
+                        rhs: Box::new(Function::Const { value: 2.71 })
+                    })
                 }),
                 Function::from_str("145 ^ 42 + 3.14 * 2.71")
             );
@@ -1048,14 +1048,14 @@ mod tests {
         fn operations_order_pow_mul_add() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Mul {
-                        lhs: box Function::Pow {
-                            lhs: box Function::Const { value: 145. },
-                            rhs: box Function::Const { value: 42. }
-                        },
-                        rhs: box Function::Const { value: 3.14 }
-                    },
-                    rhs: box Function::Const { value: 2.71 },
+                    lhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::Pow {
+                            lhs: Box::new(Function::Const { value: 145. }),
+                            rhs: Box::new(Function::Const { value: 42. })
+                        }),
+                        rhs: Box::new(Function::Const { value: 3.14 })
+                    }),
+                    rhs: Box::new(Function::Const { value: 2.71 })
                 }),
                 Function::from_str("145 ^ 42 * 3.14 + 2.71")
             );
@@ -1065,9 +1065,9 @@ mod tests {
         fn from_str() {
             assert_eq!(
                 Ok(Function::Neg {
-                    value: box Function::Sin {
-                        value: box Function::X
-                    }
+                    value: Box::new(Function::Sin {
+                        value: Box::new(Function::X)
+                    })
                 }),
                 Function::from_str("-sin(x)")
             );
@@ -1076,41 +1076,41 @@ mod tests {
         fn complex_two_gausses() {
             assert_eq!(
                 Ok(Function::Add {
-                    lhs: box Function::Param { name: 'h' },
-                    rhs: box Function::Add {
-                        lhs: box Function::Mul {
-                            lhs: box Function::Param { name: 'a' },
-                            rhs: box Function::Exp {
-                                value: box Function::Neg {
-                                    value: box Function::Sq {
-                                        value: box Function::Div {
-                                            lhs: box Function::Sub {
-                                                lhs: box Function::X,
-                                                rhs: box Function::Param { name: 'm' }
-                                            },
-                                            rhs: box Function::Param { name: 's' }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        rhs: box Function::Mul {
-                            lhs: box Function::Param { name: 'b' },
-                            rhs: box Function::Exp {
-                                value: box Function::Neg {
-                                    value: box Function::Sq {
-                                        value: box Function::Div {
-                                            lhs: box Function::Sub {
-                                                lhs: box Function::X,
-                                                rhs: box Function::Param { name: 'n' }
-                                            },
-                                            rhs: box Function::Param { name: 't' }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    lhs: Box::new(Function::Param { name: 'h' }),
+                    rhs: Box::new(Function::Add {
+                        lhs: Box::new(Function::Mul {
+                            lhs: Box::new(Function::Param { name: 'a' }),
+                            rhs: Box::new(Function::Exp {
+                                value: Box::new(Function::Neg {
+                                    value: Box::new(Function::Sq {
+                                        value: Box::new(Function::Div {
+                                            lhs: Box::new(Function::Sub {
+                                                lhs: Box::new(Function::X),
+                                                rhs: Box::new(Function::Param { name: 'm' })
+                                            }),
+                                            rhs: Box::new(Function::Param { name: 's' })
+                                        })
+                                    })
+                                })
+                            })
+                        }),
+                        rhs: Box::new(Function::Mul {
+                            lhs: Box::new(Function::Param { name: 'b' }),
+                            rhs: Box::new(Function::Exp {
+                                value: Box::new(Function::Neg {
+                                    value: Box::new(Function::Sq {
+                                        value: Box::new(Function::Div {
+                                            lhs: Box::new(Function::Sub {
+                                                lhs: Box::new(Function::X),
+                                                rhs: Box::new(Function::Param { name: 'n' })
+                                            }),
+                                            rhs: Box::new(Function::Param { name: 't' })
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
                 }),
                 Function::from_str("h + a*exp(-((x-m)/s)^2) + b*exp(-((x-n)/t)^2)")
             );
@@ -1119,33 +1119,33 @@ mod tests {
         fn complex() {
             assert_eq!(
                 Ok(Function::Mul {
-                    lhs: box Function::Mul {
-                        lhs: box Function::One,
-                        rhs: box Function::X
-                    },
-                    rhs: box Function::Add {
-                        lhs: box Function::Div {
-                            lhs: box Function::Param { name: 'c' },
-                            rhs: box Function::Add {
-                                lhs: box Function::Neg {
-                                    value: box Function::Mul {
-                                        lhs: box Function::X,
-                                        rhs: box Function::Param { name: 't' }
-                                    }
-                                },
-                                rhs: box Function::Add {
-                                    lhs: box Function::Param { name: 'u' },
-                                    rhs: box Function::Sin {
-                                        value: box Function::Mul {
-                                            lhs: box Function::Param { name: 'v' },
-                                            rhs: box Function::X
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        rhs: box Function::Param { name: 'm' }
-                    }
+                    lhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::One),
+                        rhs: Box::new(Function::X)
+                    }),
+                    rhs: Box::new(Function::Add {
+                        lhs: Box::new(Function::Div {
+                            lhs: Box::new(Function::Param { name: 'c' }),
+                            rhs: Box::new(Function::Add {
+                                lhs: Box::new(Function::Neg {
+                                    value: Box::new(Function::Mul {
+                                        lhs: Box::new(Function::X),
+                                        rhs: Box::new(Function::Param { name: 't' })
+                                    })
+                                }),
+                                rhs: Box::new(Function::Add {
+                                    lhs: Box::new(Function::Param { name: 'u' }),
+                                    rhs: Box::new(Function::Sin {
+                                        value: Box::new(Function::Mul {
+                                            lhs: Box::new(Function::Param { name: 'v' }),
+                                            rhs: Box::new(Function::X)
+                                        })
+                                    })
+                                })
+                            })
+                        }),
+                        rhs: Box::new(Function::Param { name: 'm' })
+                    })
                 }),
                 Function::from_str("(1*x) * ((c/(-(x*t)+(u+sin(v*x))))+m)")
             );
@@ -1154,22 +1154,22 @@ mod tests {
         fn complex_2() {
             assert_eq!(
                 Ok(Function::Mul {
-                    lhs: box Function::Pow {
-                        lhs: box Function::Pow {
-                            lhs: box Function::Div {
-                                lhs: box Function::Exp {
-                                    value: box Function::X
-                                },
-                                rhs: box Function::X,
-                            },
-                            rhs: box Function::Param { name: 'w' }
-                        },
-                        rhs: box Function::Param { name: 'q' }
-                    },
-                    rhs: box Function::Mul {
-                        lhs: box Function::X,
-                        rhs: box Function::Param { name: 'v' }
-                    }
+                    lhs: Box::new(Function::Pow {
+                        lhs: Box::new(Function::Pow {
+                            lhs: Box::new(Function::Div {
+                                lhs: Box::new(Function::Exp {
+                                    value: Box::new(Function::X)
+                                }),
+                                rhs: Box::new(Function::X)
+                            }),
+                            rhs: Box::new(Function::Param { name: 'w' })
+                        }),
+                        rhs: Box::new(Function::Param { name: 'q' })
+                    }),
+                    rhs: Box::new(Function::Mul {
+                        lhs: Box::new(Function::X),
+                        rhs: Box::new(Function::Param { name: 'v' })
+                    })
                 }),
                 Function::from_str("((exp(x) / x)^(w))^(q) * (x * v)")
             );
