@@ -224,7 +224,7 @@ fn print_stats(funcs_generated: u64, funcs_fitted: u64, time_begin: Instant) {
     let millis_passed = time_delta.as_micros();
     let funcs_generated_per_sec = 1e6 * (funcs_generated as float) / (millis_passed as float);
     let funcs_fitted_per_sec    = 1e6 * (funcs_fitted    as float) / (millis_passed as float);
-    fn number_to_decimal_places(x: float) -> u8 {
+    fn number_to_decimal_places(x: float) -> usize {
         match x {
             x if x > 1000. => 0,
             x if x > 100.0 => 1,
@@ -236,21 +236,9 @@ fn print_stats(funcs_generated: u64, funcs_fitted: u64, time_begin: Instant) {
             _              => 6
         }
     }
-    fn format_with_decimal_places(x: float, decimal_places: u8) -> String {
-        match decimal_places {
-            0 => format!("{:.0}", x),
-            1 => format!("{:.1}", x),
-            2 => format!("{:.2}", x),
-            3 => format!("{:.3}", x),
-            4 => format!("{:.4}", x),
-            5 => format!("{:.5}", x),
-            6 => format!("{:.6}", x),
-            7 => format!("{:.7}", x),
-            _ => unimplemented!()
-        }
-    }
     fn format(x: float) -> String {
-        format_with_decimal_places(x, number_to_decimal_places(x))
+        // format_with_decimal_places(x, number_to_decimal_places(x))
+        format!("{0:.1$}", x, number_to_decimal_places(x))
     }
     println!("funcs generated: {}\t{}/s", funcs_generated, format(funcs_generated_per_sec));
     println!("funcs fitted   : {}\t{}/s", funcs_fitted, format(funcs_fitted_per_sec));
