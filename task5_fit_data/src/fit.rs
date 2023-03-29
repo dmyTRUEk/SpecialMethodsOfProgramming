@@ -75,7 +75,8 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
                 let mut params = f.params.clone();
                 // TODO(optimization)?: unroll for loop by hands.
                 for delta in [-step, step] {
-                    let new_param_value = param.value + delta;
+                    let old_param_value = param.value;
+                    let new_param_value = old_param_value + delta;
                     // if !new_param_value.is_finite() { return Err(format!("`param.value + delta` isn't finite")) }
                     // TODO(optimization)?: just remove this whole if.
                     if !new_param_value.is_finite() {
@@ -84,6 +85,7 @@ fn fit_by_pattern_search_algorithm(f: &mut FunctionAndParams, points: &Points) -
                     }
                     params.set_by_name(param.name, new_param_value);
                     let res = f.calc_fit_residue_with_params(&params, points);
+                    params.set_by_name(param.name, old_param_value);
                     fit_residue_evals += 1;
                     residues_at_shifted_params.push(if res.is_finite() { res } else { float::NAN });
                 }
