@@ -13,16 +13,24 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 mod fit_params {
     use super::*;
     pub const INITIAL_VALUES: float = 0.;
-    pub const FIT_ALGORITHM_MIN_STEP: float = 1e-4;
-    pub const FIT_RESIDUE_EVALS_MAX: u64 = 100_000_000;
     pub const FIT_ALGORITHM_TYPE    : FitAlgorithmType = FitAlgorithmType::PatternSearch;
-    pub const RESIDUAL_FUNCTION_TYPE: DiffFunctionType = DiffFunctionType::DySqr;
+    pub const FUNCTION_TO_MINIMIZE  : FunctionToMinimize = FunctionToMinimize {
+        diff_function_type: DiffFunctionType::DySqr,
+        // antispikes: None
+        antispikes: Some(Antispikes {
+            antispikes_type: AntispikesType::DySqr,
+            antispikes_k: 1.0
+        })
+    };
+    // pub const FIT_RESIDUE_GOAL   : float = 1e-1; // for Pattern Search
+    pub const FIT_ALGORITHM_MIN_STEP: float = 1e-4; // for Pattern Search & Downhill Simplex
+    pub const FIT_RESIDUE_EVALS_MAX : u64 = 100_000_000;
 }
 
 mod patter_search_params {
     use super::*;
     pub const INITIAL_STEP: float = 0.2;
-    pub const ALPHA: float = 2.;         // step increase coefficient
+    pub const ALPHA: float = 1.1;        // step increase coefficient
     pub const BETA : float = 1. / ALPHA; // step decrease coefficient
 }
 
@@ -45,18 +53,30 @@ fn main() {
         _ => panic!("Too many CLI args.")
     };
 
-    print!("loading instrument from `{}`...", filepathstr_instrument); flush();
+    print!("Loading instrumental spectrum from  `{}`...", filepathstr_instrument); flush();
     let points_instrument = load_data_y(filepathstr_instrument);
     println!(" done");
 
-    print!("loading spectrum from `{}`...", filepathstr_spectrum); flush();
+    print!("Loading spectrum to deconvolve from `{}`...", filepathstr_spectrum); flush();
     let points_spectrum = load_data_y(filepathstr_spectrum);
     println!(" done");
 
     // TODO: warning if points in instr more than in spectrum.
+    assert!(points_spectrum.len() > points_instrument.len());
 
-    println!("FIT_RESIDUE_EVALS_MAX  = {}", fit_params::FIT_RESIDUE_EVALS_MAX.to_string_beautiful());
-    println!("FIT_ALGORITHM_MIN_STEP = {:.2e}", fit_params::FIT_ALGORITHM_MIN_STEP);
+    match fit_params::FIT_ALGORITHM_TYPE {
+        FitAlgorithmType::PatternSearch => {
+            println!("FIT_ALGORITHM_TYPE    : {:#?}", fit_params::FIT_ALGORITHM_TYPE);
+            println!("FIT_ALGORITHM_MIN_STEP: {:.2e}", fit_params::FIT_ALGORITHM_MIN_STEP);
+            // println!("FIT_RESIDUE_GOAL     : {:.2e}", fit_params::FIT_RESIDUE_GOAL);
+            println!("FIT_RESIDUE_EVALS_MAX : {}", fit_params::FIT_RESIDUE_EVALS_MAX.to_string_beautiful());
+        }
+        FitAlgorithmType::DownhillSimplex => {
+            println!("FIT_ALGORITHM_TYPE    : {:#?}", fit_params::FIT_ALGORITHM_TYPE);
+            println!("FIT_ALGORITHM_MIN_STEP: {:.2e}", fit_params::FIT_ALGORITHM_MIN_STEP);
+            println!("FIT_RESIDUE_EVALS_MAX : {}", fit_params::FIT_RESIDUE_EVALS_MAX.to_string_beautiful());
+        }
+    }
 
     let deconvolve_results = DECONVOLUTION_SOLVER_TYPE.deconvolve(points_instrument, points_spectrum);
     dbg!(&deconvolve_results);
@@ -76,12 +96,12 @@ fn main() {
     ));
     let mut file_output = File::create(filepath_output).unwrap();
 
-    // TODO(refactor): `zip_exact`.
+    use std::io::Write;
     // assert_eq!((1010..=1089).count(), deconvolve_results.points.len());
+    // // TODO(refactor): `zip_exact`.
     // for (x, point) in (1010..=1089).zip(deconvolve_results.points) {
     //     writeln!(file_output, "{x}\t{p}", p=point).unwrap();
     // }
-    use std::io::Write;
     for i in 0..deconvolve_results.points.len() {
         let point = deconvolve_results.points[i];
         writeln!(file_output, "{i}\t{p}", p=point).unwrap();
@@ -113,6 +133,8 @@ pub fn convolve(points_instrument: &Vec<float>, points_spectrum_original: &Vec<f
 }
 
 
+type DeconvolutionResultOrError = FitResultsOrError;
+
 #[allow(dead_code)]
 pub enum DeconvolutionSolverType {
     Simple,
@@ -120,25 +142,96 @@ pub enum DeconvolutionSolverType {
 }
 impl DeconvolutionSolverType {
     // TODO: make separate types for `points_instrument` & `points_spectrum` to prevent mixing them up.
-    pub fn deconvolve(&self, points_instrument: Vec<float>, points_spectrum: Vec<float>) -> FitResultsOrError {
+    pub fn deconvolve(&self, points_instrument: Vec<float>, points_spectrum: Vec<float>) -> DeconvolutionResultOrError {
         match DECONVOLUTION_SOLVER_TYPE {
             DeconvolutionSolverType::Simple  => Self::deconvolve_simple (points_instrument, points_spectrum),
             DeconvolutionSolverType::Fourier => Self::deconvolve_fourier(points_instrument, points_spectrum),
         }
     }
 
-    fn deconvolve_simple(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> FitResultsOrError {
+    fn deconvolve_simple_with_residue_function(
+        points_instrument: Vec<float>,
+        points_spectrum  : Vec<float>,
+        residue_function : fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
+    ) -> DeconvolutionResultOrError {
+        fit_params::FIT_ALGORITHM_TYPE.fit(points_instrument, points_spectrum, residue_function)
+    }
+    fn deconvolve_simple(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> DeconvolutionResultOrError {
         fn residue_function(params: &Vec<float>, points_instrument: &Vec<f64>, points_spectrum: &Vec<f64>) -> float {
             assert_eq!(points_spectrum.len(), params.len());
             let points_convolved = convolve(&points_instrument, params);
-            fit_params::RESIDUAL_FUNCTION_TYPE.calc_diff(&points_spectrum, &points_convolved)
+            fit_params::FUNCTION_TO_MINIMIZE.calc(&points_spectrum, &points_convolved)
         }
-        fit_params::FIT_ALGORITHM_TYPE.fit(residue_function, points_instrument, points_spectrum)
+        Self::deconvolve_simple_with_residue_function(points_instrument, points_spectrum, residue_function)
     }
 
     #[allow(unused)]
-    fn deconvolve_fourier(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> FitResultsOrError {
+    fn deconvolve_fourier(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> DeconvolutionResultOrError {
         unimplemented!()
+    }
+}
+
+
+pub struct FunctionToMinimize {
+    diff_function_type: DiffFunctionType,
+    antispikes: Option<Antispikes>,
+}
+impl FunctionToMinimize {
+    fn calc(&self, points_1: &Vec<float>, points_2: &Vec<float>) -> float {
+        let mut res: float = 0.;
+        res += self.diff_function_type.calc_diff(points_1, points_2);
+        if let Some(antispikes) = &self.antispikes {
+            res += antispikes.calc(points_1, points_2);
+        }
+        res
+    }
+}
+
+
+pub struct Antispikes {
+    antispikes_type: AntispikesType,
+    antispikes_k: float,
+}
+impl Antispikes {
+    fn calc(&self, points_1: &Vec<float>, points_2: &Vec<float>) -> float {
+        self.antispikes_k * self.antispikes_type.calc(points_1, points_2)
+    }
+}
+
+
+pub enum AntispikesType {
+    DySqr,
+    DyAbs,
+}
+impl AntispikesType {
+    fn calc(&self, points_1: &Vec<float>, points_2: &Vec<float>) -> float {
+        assert_eq!(points_1.len(), points_2.len());
+        match self {
+            Self::DySqr => {
+                let mut res: float = 0.;
+                for points in [points_1, points_2] {
+                    for point_prev_next in points.windows(2).into_iter() {
+                        let (point_prev, point_next) = (point_prev_next[0], point_prev_next[1]);
+                        let delta = point_next - point_prev;
+                        let delta = delta.powi(2); // TODO(refactor): rename var
+                        res += delta;
+                    }
+                }
+                res.sqrt()
+            }
+            Self::DyAbs => {
+                let mut res: float = 0.;
+                for points in [points_1, points_2] {
+                    for point_prev_next in points.windows(2).into_iter() {
+                        let (point_prev, point_next) = (point_prev_next[0], point_prev_next[1]);
+                        let delta = point_next - point_prev;
+                        let delta = delta.abs(); // TODO(refactor): rename var
+                        res += delta;
+                    }
+                }
+                res
+            }
+        }
     }
 }
 
@@ -154,25 +247,27 @@ impl DiffFunctionType {
     pub fn calc_diff(&self, points_1: &Vec<float>, points_2: &Vec<float>) -> float {
         assert_eq!(points_1.len(), points_2.len());
         match self {
-            DiffFunctionType::DySqr => {
+            Self::DySqr => {
                 let mut res: float = 0.;
                 for (point_1, point_2) in points_1.into_iter().zip(points_2) {
                     let delta = point_2 - point_1;
-                    res += delta.powi(2);
+                    let delta = delta.powi(2); // TODO(refactor): rename var
+                    res += delta;
                 }
                 res.sqrt()
             }
-            DiffFunctionType::DyAbs => {
+            Self::DyAbs => {
                 let mut res: float = 0.;
                 for (point_1, point_2) in points_1.into_iter().zip(points_2) {
                     let delta = point_2 - point_1;
-                    res += delta.abs();
+                    let delta = delta.abs(); // TODO(refactor): rename var
+                    res += delta;
                 }
                 res
             }
-            DiffFunctionType::DySqrPerEl => DiffFunctionType::DySqr.calc_diff(points_1, points_2) / points_1.len() as float,
-            DiffFunctionType::DyAbsPerEl => DiffFunctionType::DyAbs.calc_diff(points_1, points_2) / points_1.len() as float,
-            DiffFunctionType::LeastDist => { unimplemented!() }
+            Self::DySqrPerEl => Self::DySqr.calc_diff(points_1, points_2) / points_1.len() as float,
+            Self::DyAbsPerEl => Self::DyAbs.calc_diff(points_1, points_2) / points_1.len() as float,
+            Self::LeastDist => { unimplemented!() }
         }
     }
 }
@@ -186,6 +281,7 @@ pub struct FitResults {
 // type FitResultsOrNone = Option<FitResults>;
 type FitResultsOrError = Result<FitResults, &'static str>;
 
+#[derive(Debug)]
 pub enum FitAlgorithmType {
     PatternSearch,
     DownhillSimplex,
@@ -193,20 +289,20 @@ pub enum FitAlgorithmType {
 impl FitAlgorithmType {
     pub fn fit(
         &self,
-        residue_function: fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
         points_instrument: Vec<float>,
         points_spectrum  : Vec<float>,
+        residue_function : fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
     ) -> FitResultsOrError {
         match &self {
-            FitAlgorithmType::PatternSearch   => Self::fit_by_pattern_search_algorithm  (residue_function, points_instrument, points_spectrum),
-            FitAlgorithmType::DownhillSimplex => Self::fit_by_downhill_simplex_algorithm(residue_function, points_instrument, points_spectrum),
+            FitAlgorithmType::PatternSearch   => Self::fit_by_pattern_search_algorithm  (points_instrument, points_spectrum, residue_function),
+            FitAlgorithmType::DownhillSimplex => Self::fit_by_downhill_simplex_algorithm(points_instrument, points_spectrum, residue_function),
         }
     }
 
     fn fit_by_pattern_search_algorithm(
-        residue_function: fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
         points_instrument: Vec<float>,
         points_spectrum  : Vec<float>,
+        residue_function : fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
     ) -> FitResultsOrError {
         use crate::{fit_params::*, patter_search_params::*};
         const DEBUG: bool = false;
@@ -223,6 +319,7 @@ impl FitAlgorithmType {
         let mut fit_residue_evals: u64 = 0;
 
         while step > FIT_ALGORITHM_MIN_STEP && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
+        // while residue_function(&params, &points_instrument, &points_spectrum) > FIT_RESIDUE_GOAL && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
             if DEBUG {
                 println!("params = {:#?}", params);
                 println!("step = {}", step);
@@ -302,7 +399,7 @@ impl FitAlgorithmType {
                 println!("HIT MAX_ITERS!!!");
                 press_enter_to_continue();
             }
-            return Err("hit max iters");
+            return Err("hit max evals");
             // return None;
         }
         if DEBUG { println!("finished in {} iters", fit_residue_evals) }
@@ -317,9 +414,9 @@ impl FitAlgorithmType {
 
 
     fn fit_by_downhill_simplex_algorithm(
-        residue_function: fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
         points_instrument: Vec<float>,
         points_spectrum  : Vec<float>,
+        residue_function : fn(&Vec<float>, &Vec<float>, &Vec<float>) -> float,
     ) -> FitResultsOrError {
         use crate::{downhill_simplex_params::*, fit_params::*};
         const DEBUG: bool = false;
@@ -444,7 +541,7 @@ impl FitAlgorithmType {
                 println!("HIT MAX_ITERS!!!");
                 press_enter_to_continue();
             }
-            return Err("hit max iters");
+            return Err("hit max evals");
             // return None;
         }
         let points = params_and_ress_vec.get_params().avg();
@@ -698,7 +795,7 @@ pub fn flush() {
 mod tests {
 
     mod separate_chunks_from_end {
-        use super::super::*;
+        use crate::ExtStringSeparateChunks;
         #[test]
         fn _a() {
             assert_eq!("a", "a".separate_chunks_from_end("_-", 3));
@@ -725,7 +822,7 @@ mod tests {
         mod min {
             mod with_ceil {
                 mod without_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn ceil_between_min_and_max() {
                         assert_eq!(Some(5), vec![14., 0., 1., 4., 8., -53., 43., 520.].index_of_min_with_ceil(42.));
@@ -740,7 +837,7 @@ mod tests {
                     }
                 }
                 mod with_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn ceil_between_min_and_max() {
                         assert_eq!(Some(5), vec![14., 0., 1., 4., 8., -53., 43., 520., f64::NAN].index_of_min_with_ceil(42.));
@@ -757,7 +854,7 @@ mod tests {
             }
             mod with_floor {
                 mod without_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn floor_between_min_and_max() {
                         assert_eq!(Some(6), vec![14., 0., 1., 4., 8., -53., 43., 520.].index_of_min_with_floor(42.));
@@ -772,7 +869,7 @@ mod tests {
                     }
                 }
                 mod with_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn floor_between_min_and_max() {
                         assert_eq!(Some(6), vec![14., 0., 1., 4., 8., -53., 43., 520., f64::NAN].index_of_min_with_floor(42.));
@@ -791,7 +888,7 @@ mod tests {
         mod max {
             mod with_ceil {
                 mod without_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn ceil_between_min_and_max() {
                         assert_eq!(Some(0), vec![14., 0., 1., 4., 8., -53., 43., 520.].index_of_max_with_ceil(42.));
@@ -806,7 +903,7 @@ mod tests {
                     }
                 }
                 mod with_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn ceil_between_min_and_max() {
                         assert_eq!(Some(0), vec![14., 0., 1., 4., 8., -53., 43., 520., f64::NAN].index_of_max_with_ceil(42.));
@@ -823,7 +920,7 @@ mod tests {
             }
             mod with_floor {
                 mod without_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn floor_between_min_and_max() {
                         assert_eq!(Some(7), vec![14., 0., 1., 4., 8., -53., 43., 520.].index_of_max_with_floor(42.));
@@ -838,7 +935,7 @@ mod tests {
                     }
                 }
                 mod with_nan {
-                    use super::super::super::super::super::*;
+                    use crate::IndexOfMinMaxWithCeilFloor;
                     #[test]
                     fn floor_between_min_and_max() {
                         assert_eq!(Some(7), vec![14., 0., 1., 4., 8., -53., 43., 520., f64::NAN].index_of_max_with_floor(42.));
@@ -857,7 +954,7 @@ mod tests {
     }
 
     mod convolve {
-        use super::super::{DiffFunctionType, convolve, float};
+        use crate::{DiffFunctionType, convolve, float};
         mod instrument_is_identity {
             use super::*;
             const POINTS_INSTRUMENT: [float; 1] = [1.];
@@ -1221,7 +1318,23 @@ mod tests {
     }
 
     mod deconvolve_simple {
-        use super::super::{DeconvolutionSolverType::Simple as DST, DiffFunctionType, float};
+        use super::super::{DeconvolutionResultOrError, DeconvolutionSolverType, DiffFunctionType, FunctionToMinimize, convolve, float};
+        const FUNCTION_TO_MINIMIZE: FunctionToMinimize = FunctionToMinimize {
+            diff_function_type: DiffFunctionType::DySqr,
+            antispikes: None
+        };
+        fn residue_function(params: &Vec<float>, points_instrument: &Vec<f64>, points_spectrum: &Vec<f64>) -> float {
+            assert_eq!(points_spectrum.len(), params.len());
+            let points_convolved = convolve(&points_instrument, params);
+            FUNCTION_TO_MINIMIZE.calc(&points_spectrum, &points_convolved)
+        }
+        fn deconvolve(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> DeconvolutionResultOrError {
+            DeconvolutionSolverType::deconvolve_simple_with_residue_function(
+                points_instrument,
+                points_spectrum,
+                residue_function,
+            )
+        }
         mod instrument_is_identity {
             use super::*;
             const POINTS_INSTRUMENT: [float; 1] = [1.];
@@ -1233,7 +1346,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1246,7 +1359,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1259,7 +1372,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1276,7 +1389,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1289,7 +1402,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1302,7 +1415,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1323,7 +1436,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1336,7 +1449,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1349,7 +1462,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1366,7 +1479,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1379,7 +1492,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1392,7 +1505,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1413,7 +1526,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1426,7 +1539,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1439,7 +1552,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1456,7 +1569,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1469,7 +1582,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1482,7 +1595,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
                     let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1503,7 +1616,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 9], vec![0.5, 1., 0.5], vec![0.; 9]].concat();
                     let points_deconvolved_expected = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1516,7 +1629,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1., 0.5], vec![0.; 19]].concat();
                     let points_deconvolved_expected = [vec![1.], vec![0.; 20]].concat();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1529,7 +1642,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 19], vec![0.5, 1.]].concat();
                     let points_deconvolved_expected = [vec![0.; 20], vec![1.]].concat();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1546,7 +1659,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 5], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 5]].concat();
                     let points_deconvolved_expected = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1559,7 +1672,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 11]].concat();
                     let points_deconvolved_expected = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1572,7 +1685,7 @@ mod tests {
                     println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                     let points_spectrum_convolved = [vec![0.; 11], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1.]].concat();
                     let points_deconvolved_expected = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let deconvolve_results = DST.deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
                     let points_deconvolved_actual = deconvolve_results.points;
                     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
                     println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
@@ -1583,6 +1696,5 @@ mod tests {
             }
         }
     }
-
 }
 
