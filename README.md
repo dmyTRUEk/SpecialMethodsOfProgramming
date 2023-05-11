@@ -128,6 +128,9 @@ Program algorithm:
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/759ff1e26fd01609751deb448dbc5c4bb151c1c8/SMoPD_task5.4_fit6.png)
 
 ## Task 5.fun
+<details>
+<summary>Screenshots:</summary>
+
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit1.png)
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit2.png)
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit3.png)
@@ -168,6 +171,8 @@ Program algorithm:
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit38.png)
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit39.png)
 ![Screenshot](https://raw.githubusercontent.com/dmyTRUEk/images/8950b23a09dba13ff678dcceccf518fd47f89ed7/SMoPD_task5.fun_fit40.png)
+
+</details>
 
 
 # Task 6: deconvolution
