@@ -68,11 +68,11 @@ fn main() {
     };
 
     print!("Loading instrumental spectrum  from `{}`...", filepathstr_instrument); flush();
-    let instrument = SpectrumData::load_from_file(filepathstr_instrument);
+    let instrument = Spectrum::load_from_file(filepathstr_instrument);
     println!(" done");
 
     print!("Loading spectrum to deconvolve from `{}`...", filepathstr_measured); flush();
-    let measured = SpectrumData::load_from_file(filepathstr_measured);
+    let measured = Spectrum::load_from_file(filepathstr_measured);
     println!(" done");
     let points_spectrum_len: usize = measured.points.len();
 
@@ -150,7 +150,7 @@ fn main() {
     // }
     match deconvolution_params::DECONVOLUTION {
         Deconvolution::PerPoint { .. } => {
-            let sd_deconvolved = SpectrumData {
+            let sd_deconvolved = Spectrum {
                 points: deconvolve_results.params.clone(),
                 step: deconvolution_data.get_step(),
                 x_start: deconvolution_data.measured.x_start,
@@ -184,7 +184,7 @@ fn main() {
         ),
         Deconvolution::Fourier {} => unimplemented!(),
     };
-    let convolved = SpectrumData {
+    let convolved = Spectrum {
         points: convolved_points,
         x_start: deconvolution_data.measured.x_start,
         step: deconvolution_data.measured.step,
@@ -228,8 +228,8 @@ impl<'a> Deconvolution<'a> {
 
 #[derive(Debug, PartialEq)]
 pub struct DeconvolutionData<'a> {
-    pub instrument: SpectrumData,
-    pub measured: SpectrumData,
+    pub instrument: Spectrum,
+    pub measured: Spectrum,
     pub deconvolution: Deconvolution<'a>,
 }
 impl<'a> DeconvolutionData<'a> {
@@ -427,12 +427,12 @@ pub fn convolve_per_point(points_instrument: &Vec<float>, points_spectrum_origin
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct SpectrumData {
+pub struct Spectrum {
     pub points: Vec<float>,
     pub step: float,
     pub x_start: float,
 }
-impl SpectrumData {
+impl Spectrum {
     pub fn get_x_end(&self) -> float {
         // self.start_x + self.step * (self.points.len() as float)
         self.get_x_from_index(self.points.len())
@@ -541,7 +541,7 @@ impl SpectrumData {
         }
         let Some(x_start) = x_start else { return Err("`start_x` is None") };
         let Some(step) = step else { return Err("`step` is None") };
-        Ok(SpectrumData {
+        Ok(Spectrum {
             points: ys,
             x_start,
             step,
@@ -1335,15 +1335,15 @@ mod tests {
         }
     }
 
-    mod spectrum_data {
-        use crate::SpectrumData;
+    mod spectrum {
+        use crate::Spectrum;
         mod get_x_from_index {
             use super::*;
             #[test]
             fn _5_0() {
                 assert_eq!(
                     0.7,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1354,7 +1354,7 @@ mod tests {
             fn _5_1() {
                 assert_eq!(
                     1.1,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1365,7 +1365,7 @@ mod tests {
             fn _5_2() {
                 assert_eq!(
                     1.5,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1376,7 +1376,7 @@ mod tests {
             fn _5_3() {
                 assert_eq!(
                     1.9000000000000001,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1387,7 +1387,7 @@ mod tests {
             fn _5_4() {
                 assert_eq!(
                     2.3,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1398,7 +1398,7 @@ mod tests {
             fn _5_5() {
                 assert_eq!(
                     2.7,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1412,7 +1412,7 @@ mod tests {
             fn _0() {
                 assert_eq!(
                     0.7,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1423,7 +1423,7 @@ mod tests {
             fn _1() {
                 assert_eq!(
                     1.1,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1434,7 +1434,7 @@ mod tests {
             fn _2() {
                 assert_eq!(
                     1.5,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1],
                         step: 0.4,
                         x_start: 0.7,
@@ -1445,7 +1445,7 @@ mod tests {
             fn _3() {
                 assert_eq!(
                     1.9000000000000001,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1, 0.2],
                         step: 0.4,
                         x_start: 0.7,
@@ -1456,7 +1456,7 @@ mod tests {
             fn _4() {
                 assert_eq!(
                     2.3,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1, 0.2, 0.1],
                         step: 0.4,
                         x_start: 0.7,
@@ -1467,7 +1467,7 @@ mod tests {
             fn _5() {
                 assert_eq!(
                     2.7,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1, 0.2, 0.1, 0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1481,7 +1481,7 @@ mod tests {
             fn _0() {
                 assert_eq!(
                     0.,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![],
                         step: 0.4,
                         x_start: 0.7,
@@ -1492,7 +1492,7 @@ mod tests {
             fn _1() {
                 assert_eq!(
                     0.,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1503,7 +1503,7 @@ mod tests {
             fn _2() {
                 assert_eq!(
                     0.4,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1],
                         step: 0.4,
                         x_start: 0.7,
@@ -1514,7 +1514,7 @@ mod tests {
             fn _3() {
                 assert_eq!(
                     0.8,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1, 0.2],
                         step: 0.4,
                         x_start: 0.7,
@@ -1525,7 +1525,7 @@ mod tests {
             fn _4() {
                 assert_eq!(
                     1.2000000000000002,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1, 0.2, 0.1],
                         step: 0.4,
                         x_start: 0.7,
@@ -1536,7 +1536,7 @@ mod tests {
             fn _5() {
                 assert_eq!(
                     1.6,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1, 0.2, 0.1, 0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1553,7 +1553,7 @@ mod tests {
                     dbg!(x);
                     assert_eq!(
                         (0, 1),
-                        SpectrumData {
+                        Spectrum {
                             points: vec![0., 0.1, 0.2, 0.1, 0.],
                             step: 0.4,
                             x_start: 0.7,
@@ -1567,7 +1567,7 @@ mod tests {
                     dbg!(x);
                     assert_eq!(
                         (1, 2),
-                        SpectrumData {
+                        Spectrum {
                             points: vec![0., 0.1, 0.2, 0.1, 0.],
                             step: 0.4,
                             x_start: 0.7,
@@ -1581,7 +1581,7 @@ mod tests {
                     dbg!(x);
                     assert_eq!(
                         (2, 3),
-                        SpectrumData {
+                        Spectrum {
                             points: vec![0., 0.1, 0.2, 0.1, 0.],
                             step: 0.4,
                             x_start: 0.7,
@@ -1595,7 +1595,7 @@ mod tests {
                     dbg!(x);
                     assert_eq!(
                         (3, 4),
-                        SpectrumData {
+                        Spectrum {
                             points: vec![0., 0.1, 0.2, 0.1, 0.],
                             step: 0.4,
                             x_start: 0.7,
@@ -1610,7 +1610,7 @@ mod tests {
             fn _2__0_2() {
                 assert_eq!(
                     6, // dx: 0. 0.2 0.4 0.6 0.8 1.0
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.
                         points: vec![0., 10.],
                         step: 1.,
@@ -1622,7 +1622,7 @@ mod tests {
             fn _2__0_199() {
                 assert_eq!(
                     6, // dx: 0. 0.199 0.398 0.597 0.796 0.995
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.
                         points: vec![0., 10.],
                         step: 1.,
@@ -1634,7 +1634,7 @@ mod tests {
             fn _2__0_201() {
                 assert_eq!(
                     5, // dx: 0. 0.201 0.402 0.603 0.804
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.
                         points: vec![0., 10.],
                         step: 1.,
@@ -1646,7 +1646,7 @@ mod tests {
             fn _3__0_2() {
                 assert_eq!(
                     11, // dx: 0. 0.2 0.4 0.6 0.8 1. 1.2 1.4 1.6 1.8 2.0
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.   2.
                         points: vec![0., 10., 20.],
                         step: 1.,
@@ -1658,7 +1658,7 @@ mod tests {
             fn _3__0_199() {
                 assert_eq!(
                     11,
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.   2.
                         points: vec![0., 10., 20.],
                         step: 1.,
@@ -1670,7 +1670,7 @@ mod tests {
             fn _3__0_201() {
                 assert_eq!(
                     10,
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.   2.
                         points: vec![0., 10., 20.],
                         step: 1.,
@@ -1682,7 +1682,7 @@ mod tests {
             fn _4__0_2() {
                 assert_eq!(
                     16, // dx: 0. 0.2 0.4 0.6 0.8 1. 1.2 1.4 1.6 1.8 2. 2.2 2.4 2.6 2.8 3.0
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.   2.   3.
                         points: vec![0., 10., 20., 30.],
                         step: 1.,
@@ -1694,7 +1694,7 @@ mod tests {
             fn _4__0_199() {
                 assert_eq!(
                     16,
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.   2.   3.
                         points: vec![0., 10., 20., 30.],
                         step: 1.,
@@ -1706,7 +1706,7 @@ mod tests {
             fn _4__0_201() {
                 assert_eq!(
                     15,
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.   2.   3.
                         points: vec![0., 10., 20., 30.],
                         step: 1.,
@@ -1719,7 +1719,7 @@ mod tests {
             fn _5__0_2() {
                 assert_eq!(
                     9,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.2, 0.4, 0.2, 0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1730,7 +1730,7 @@ mod tests {
             fn _5__0_199() {
                 assert_eq!(
                     9,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.2, 0.4, 0.2, 0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1741,7 +1741,7 @@ mod tests {
             fn _5__0_201() {
                 assert_eq!(
                     8,
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.2, 0.4, 0.2, 0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1754,13 +1754,13 @@ mod tests {
             #[test]
             fn _5_into_9() {
                 assert_eq!(
-                    SpectrumData {
+                    Spectrum {
                         // points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
                         points: vec![0., 0.09999999999999998, 0.2, 0.3, 0.4, 0.30000000000000004, 0.2, 0.10000000000000003, 1.5543122344752193e-16],
                         step: 0.2,
                         x_start: 0.7,
                     },
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.2, 0.4, 0.2, 0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1770,14 +1770,14 @@ mod tests {
             #[test]
             fn _2_into_6() {
                 assert_eq!(
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0. 0.2 0.4 0.6 0.8 1.0
                         // points: vec![0., 2., 4., 6., 8., 10.],
                         points: vec![0., 1.9999999999999996, 4.000000000000002, 6.000000000000001, 8., 10.],
                         step: 0.2,
                         x_start: 0.7,
                     },
-                    SpectrumData {
+                    Spectrum {
                         // dx:       0.  1.
                         points: vec![0., 10.],
                         step: 1.,
@@ -1788,12 +1788,12 @@ mod tests {
             #[test]
             fn _9_into_4() {
                 assert_eq!(
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.3, 0.8999999999999997, 0.2, 0.],
                         step: 0.8,
                         x_start: 0.7,
                     },
-                    SpectrumData {
+                    Spectrum {
                         points: vec![0., 0.1, 0.3, 0.5, 0.9, 0.6, 0.2, 0.1, 0.],
                         step: 0.4,
                         x_start: 0.7,
@@ -1804,19 +1804,19 @@ mod tests {
     }
 
     mod deconvolution_data {
-        use crate::{Deconvolution, DeconvolutionData, DiffFunctionType, SpectrumData};
+        use crate::{Deconvolution, DeconvolutionData, DiffFunctionType, Spectrum};
         mod align_steps_to_smaller {
             use super::*;
             #[test]
             fn align_i0_4_to_m0_2() {
                 assert_eq!(
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0., 0., 0.4999999999999999, 1., 0.5000000000000001, 0., 0., 0.],
                             step: 0.2,
                             x_start: 0.7,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
                             step: 0.2,
                             x_start: 0.3,
@@ -1828,12 +1828,12 @@ mod tests {
                         },
                     },
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0., 1., 0., 0.,],
                             step: 0.4,
                             x_start: 0.7,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
                             step: 0.2,
                             x_start: 0.3,
@@ -1850,12 +1850,12 @@ mod tests {
             fn align_m0_4_to_i0_2() {
                 assert_eq!(
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
                             step: 0.2,
                             x_start: 0.5,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0., 0., 0.4999999999999999, 1., 0.5000000000000007, 0., 0., 0.],
                             step: 0.2,
                             x_start: 0.9,
@@ -1867,12 +1867,12 @@ mod tests {
                         },
                     },
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
                             step: 0.2,
                             x_start: 0.5,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0., 1., 0., 0.,],
                             step: 0.4,
                             x_start: 0.9,
@@ -1892,12 +1892,12 @@ mod tests {
             fn align_m0_2_to_i0_4() {
                 assert_eq!(
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0., 1., 0., 0.,],
                             step: 0.4,
                             x_start: 0.1,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0.2, 0.4, 0.2, 0.],
                             step: 0.4,
                             x_start: 0.5,
@@ -1909,12 +1909,12 @@ mod tests {
                         },
                     },
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0., 1., 0., 0.,],
                             step: 0.4,
                             x_start: 0.1,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
                             step: 0.2,
                             x_start: 0.5,
@@ -1931,12 +1931,12 @@ mod tests {
             fn align_i0_2_to_m0_4() {
                 assert_eq!(
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0.2, 0.4, 0.2, 0.],
                             step: 0.4,
                             x_start: 0.5,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0., 1., 0., 0.,],
                             step: 0.4,
                             x_start: 0.9,
@@ -1948,12 +1948,12 @@ mod tests {
                         },
                     },
                     DeconvolutionData {
-                        instrument: SpectrumData {
+                        instrument: Spectrum {
                             points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
                             step: 0.2,
                             x_start: 0.5,
                         },
-                        measured: SpectrumData {
+                        measured: Spectrum {
                             points: vec![0., 0., 1., 0., 0.,],
                             step: 0.4,
                             x_start: 0.9,
@@ -2360,7 +2360,7 @@ mod tests {
 
     mod deconvolve {
         mod per_point {
-            use crate::{Deconvolution, DeconvolutionData, DeconvolutionResultOrError, DiffFunctionType, FitAlgorithmType, SpectrumData, float};
+            use crate::{Deconvolution, DeconvolutionData, DeconvolutionResultOrError, DiffFunctionType, FitAlgorithmType, Spectrum, float};
             const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
             const DECONVOLUTION: Deconvolution = Deconvolution::PerPoint {
                 diff_function_type: DiffFunctionType::DySqr,
@@ -2368,12 +2368,12 @@ mod tests {
                 initial_value: 0.,
             };
             fn deconvolve(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> DeconvolutionResultOrError {
-                let instrument: SpectrumData = SpectrumData {
+                let instrument: Spectrum = Spectrum {
                     points: points_instrument,
                     step: 1.,
                     x_start: 0.,
                 };
-                let measured: SpectrumData = SpectrumData {
+                let measured: Spectrum = Spectrum {
                     points: points_spectrum,
                     step: 1.,
                     x_start: 0.,
