@@ -25,11 +25,9 @@ mod deconvolution_params {
     pub const DECONVOLUTION: Deconvolution = Deconvolution::Exponents {
         diff_function_type: DiffFunctionType::DySqr,
         exponents_amount: 2,
-        // initial_values: None,
         initial_values: &[
-            // 0.01, 2., 0.2,
-            0.02, -5., 0.2,
-            0.02, -0.001, 0.2,
+            30., -30., -10.,
+            30., 2., 0.,
         ],
     };
 }
@@ -74,7 +72,6 @@ fn main() {
     print!("Loading spectrum to deconvolve from `{}`...", filepathstr_measured); flush();
     let measured = Spectrum::load_from_file(filepathstr_measured);
     println!(" done");
-    let points_spectrum_len: usize = measured.points.len();
 
     // TODO: warning if points in instr more than in spectrum.
     assert!(measured.points.len() > instrument.points.len());
@@ -97,37 +94,34 @@ fn main() {
     let deconvolve_results = deconvolve_results.unwrap();
     println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals.to_string_underscore_separated());
 
-    if let Deconvolution::Exponents { exponents_amount, .. } = deconvolution_params::DECONVOLUTION {
-        let mut s: String = [r"f_{", &exponents_amount.to_string(), r"}\left(x\right)="].concat();
-        s += &deconvolve_results.params
-            .chunks(3).into_iter()
-            .map(|parts| {
-                let (amplitude, tau, shift) = (parts[0], parts[1], parts[2]);
-                [
-                    r"\left\{x",
-                    if tau < 0. { ">" } else { "<" },
-                    &format!("{shift:.3}"),
-                    r":",
-                    &format!("{amplitude:.3}"),
-                    r"e^{",
-                    &format!("{tau:.3}"),
-                    r"\left(x-",
-                    &format!("{shift:.3}"),
-                    r"\right)},0\right\}",
-                ].concat()
-                    .replace(
-                        'x',
-                        &[
-                            r"\frac{x-",
-                            &format!("{xs:.3}", xs=deconvolution_data.measured.x_start),
-                            r"}{",
-                            &format!("{s:.3}", s=deconvolution_data.get_step()),
-                            r"}",
-                        ].concat()
-                    )
-            })
-            .reduce(|acc, el| format!("{acc}+{el}")).unwrap();
-        println!("{s}");
+    match deconvolution_params::DECONVOLUTION {
+        Deconvolution::Exponents { exponents_amount, .. } => {
+            let mut s: String = [r"f_{", &exponents_amount.to_string(), r"}\left(x\right)="].concat();
+            s += &deconvolve_results.params
+                .chunks(3).into_iter()
+                .map(|parts| {
+                    let (amplitude, tau, shift) = (parts[0], parts[1], parts[2]);
+                    [
+                        // \left\{x>-11.8231:\frac{32.2}{1000}e^{\frac{x-11.8231}{-32.7721}},0\right\}
+                        r"\left\{x",
+                        if tau < 0. { ">" } else { "<" },
+                        &format!("{shift:.2}"),
+                        r":\frac{",
+                        &format!("{amplitude:.2}"),
+                        r"}{",
+                        &format!("{ampsc:.0}", ampsc=1./ExponentFunction::AMPLITUDE_SCALE),
+                        r"}e^{\frac{x",
+                        if shift >= 0. { "+" } else { "" },
+                        &format!("{shift:.2}"),
+                        r"}{",
+                        &format!("{tau:.2}"),
+                        r"}},0\right\}",
+                    ].concat()
+                })
+                .reduce(|acc, el| format!("{acc}+{el}")).unwrap();
+            println!("{s}");
+        }
+        _ => {}
     }
 
     let file_instrument = Path::new(filepathstr_instrument);
@@ -159,6 +153,7 @@ fn main() {
         }
         Deconvolution::Exponents { .. } => {
             let mut file_output = File::create(filepath_output).unwrap();
+            writeln!(file_output, "exponents params:").unwrap();
             for i in 0..deconvolve_results.params.len() {
                 let y = deconvolve_results.params[i];
                 writeln!(file_output, "{y}").unwrap();
@@ -172,19 +167,7 @@ fn main() {
         file_instrument.file_stem().unwrap().to_str().unwrap(),
         file_spectrum.file_stem().unwrap().to_str().unwrap()
     ));
-    // let convolved_points: Vec<float> = match deconvolution_data.deconvolution {
-    //     Deconvolution::PerPoint { .. } => convolve_per_point(
-    //         &deconvolution_data.instrument.points,
-    //         &deconvolve_results.params,
-    //     ),
-    //     Deconvolution::Exponents { .. } => convolve_exponents(
-    //         &deconvolution_data.instrument.points,
-    //         &deconvolve_results.params,
-    //         deconvolution_data.measured.points.len(),
-    //     ),
-    //     Deconvolution::Fourier {} => unimplemented!(),
-    // };
-    let convolved_points: Vec<float> = deconvolution_data.convolve(&deconvolve_results.params);
+    let convolved_points: Vec<float> = deconvolution_data.convolve_from_params(&deconvolve_results.params);
     let convolved = Spectrum {
         points: convolved_points,
         x_start: deconvolution_data.measured.x_start,
@@ -215,11 +198,33 @@ pub enum Deconvolution<'a> {
     },
 }
 impl<'a> Deconvolution<'a> {
-    pub fn params_to_spectrum(&self, params: Vec<float>) -> Vec<float> {
+    pub fn params_to_points(
+        &self,
+        params: &Vec<float>,
+        points_len: usize,
+        (x_start, x_end): (float, float),
+    ) -> Vec<float> {
+        assert!(points_len > 1);
+        assert!(x_start < x_end);
         match self {
-            Self::PerPoint { .. } => params,
-            Self::Exponents { .. } => {
-                todo!()
+            Self::PerPoint { .. } => params.to_vec(),
+            Self::Exponents { exponents_amount, .. } => {
+                assert_eq!(exponents_amount * 3, params.len());
+                let mut points = vec![0.; points_len];
+                let exponents: Vec<ExponentFunction> = params
+                    .chunks(3).into_iter()
+                    .map(|parts| ExponentFunction::new(parts[0], parts[1], parts[2]))
+                    .collect();
+                let x_range: float = x_end - x_start;
+                for i in 0..points_len {
+                    let t = (i as float) / ((points_len - 1) as float);
+                    let x = t * x_range + x_start;
+                    let sum: float = exponents.iter()
+                        .map(|exponent| exponent.eval_at(x)) // TODO: div by points_len?
+                        .sum();
+                    points[i] = sum;
+                }
+                points
             }
             Self::Fourier {} => unimplemented!(),
         }
@@ -250,18 +255,6 @@ impl<'a> DeconvolutionData<'a> {
         self.assert_x_starts_is_aligned();
         self.instrument.x_start
     }
-
-    // fn get_sd_smaller_and_bigger_steps(&mut self) -> Result<(&mut SpectrumData, &mut SpectrumData), &'static str> {
-    //     let (sd_smaller_step, sd_bigger_step) = match self.instrument.step.partial_cmp(&self.measured.step) {
-    //         Some(Ordering::Less)    => (&mut self.instrument, &mut self.measured),
-    //         Some(Ordering::Greater) => (&mut self.measured, &mut self.instrument),
-    //         Some(Ordering::Equal)   => return Err("Steps are the same"),
-    //         None => return Err("One of the numbers is `NaN`")
-    //     };
-    //     assert!(sd_smaller_step.step < sd_bigger_step.step);
-    //     Ok((sd_smaller_step, sd_bigger_step))
-    // }
-
 
     /// Make [`step`] in [`instrument`] and [`measured`] same,
     /// towards smaller step (more points in total).
@@ -317,14 +310,14 @@ impl<'a> DeconvolutionData<'a> {
     /// - Exponents: list of (amplitude, tau, shift)
     /// - Fourier: unimplemented
     pub fn calc_residue_function(&self, params: &Vec<float>) -> float {
-        let points_convolved: Vec<float> = self.convolve(params);
+        let points_convolved: Vec<float> = self.convolve_from_params(params);
         match &self.deconvolution {
             Deconvolution::PerPoint { diff_function_type, antispikes, .. } => {
-                assert_eq!(self.measured.points.len(), params.len());
+                assert_eq!(self.get_params_amount(), params.len());
                 diff_function_type.calc_diff_with_antispikes(&self.measured.points, &points_convolved, antispikes)
             }
-            Deconvolution::Exponents { diff_function_type, exponents_amount, .. } => {
-                assert_eq!(exponents_amount * 3, params.len());
+            Deconvolution::Exponents { diff_function_type, .. } => {
+                assert_eq!(self.get_params_amount(), params.len());
                 diff_function_type.calc_diff(&self.measured.points, &points_convolved)
             }
             Deconvolution::Fourier {} => {
@@ -364,27 +357,18 @@ impl<'a> DeconvolutionData<'a> {
         }
     }
 
-    pub fn convolve(&self, params: &Vec<float>) -> Vec<float> {
-        let points_convolved: Vec<float> = match self.deconvolution {
-            Deconvolution::PerPoint { .. } => convolve_by_points(&self.instrument.points, params),
-            Deconvolution::Exponents { .. } => {
-                let points_spectrum_convolved_len: usize = self.measured.points.len();
-                let mut points_spectrum_original = vec![0.; points_spectrum_convolved_len];
-                let exponents: Vec<ExponentFunction> = params
-                    .chunks(3).into_iter()
-                    .map(|parts| ExponentFunction::new(parts[0], parts[1], parts[2]))
-                    .collect();
-                for i in 0..points_spectrum_convolved_len {
-                    let sum: float = exponents.iter()
-                        .map(|exponent| exponent.eval_at(i as float))
-                        .sum();
-                    points_spectrum_original[i] = sum;
-                }
-                let points_convolved = convolve_by_points(&self.instrument.points, &points_spectrum_original);
-                points_convolved
-            }
-            Deconvolution::Fourier {} => unimplemented!(),
-        };
+    pub fn convolve_from_params(&self, params: &Vec<float>) -> Vec<float> {
+        // convert `params` into `points` ("deconvolved"):
+        let points_deconvolved: Vec<float> = self.deconvolution.params_to_points(
+            &params,
+            self.measured.points.len(),
+            (self.measured.x_start, self.measured.get_x_end())
+        );
+        self.convolve_from_points(&points_deconvolved)
+    }
+
+    pub fn convolve_from_points(&self, points_deconvolved: &Vec<float>) -> Vec<float> {
+        let points_convolved: Vec<float> = convolve_by_points(&self.instrument.points, &points_deconvolved);
         assert_eq!(self.measured.points.len(), points_convolved.len());
         points_convolved
     }
@@ -424,14 +408,18 @@ pub struct Spectrum {
     pub x_start: float,
 }
 impl Spectrum {
+    pub fn get_x_range(&self) -> float {
+        // self.get_x_end() - self.x_start
+        self.step * (self.points.len().saturating_sub(1) as float)
+    }
+
     pub fn get_x_end(&self) -> float {
         // self.start_x + self.step * (self.points.len() as float)
         self.get_x_from_index(self.points.len())
     }
 
-    pub fn get_x_range(&self) -> float {
-        // self.get_x_end() - self.x_start
-        self.step * (self.points.len().saturating_sub(1) as float)
+    pub fn get_xy_from_index(&self, i: usize) -> (float, float) {
+        (self.get_x_from_index(i), self.get_y_from_index(i))
     }
 
     pub fn get_x_from_index(&self, i: usize) -> float {
@@ -440,10 +428,6 @@ impl Spectrum {
 
     pub fn get_y_from_index(&self, i: usize) -> float {
         self.points[i]
-    }
-
-    pub fn get_xy_from_index(&self, i: usize) -> (float, float) {
-        (self.get_x_from_index(i), self.get_y_from_index(i))
     }
 
     pub fn get_indices_of_closest_to_lhs_rhs(&self, x: float) -> (usize, usize) {
@@ -547,7 +531,7 @@ pub struct Antispikes {
     antispikes_k: float,
 }
 impl Antispikes {
-    fn calc(&self, points_1: &Vec<float>, points_2: &Vec<float>) -> float {
+    pub fn calc(&self, points_1: &Vec<float>, points_2: &Vec<float>) -> float {
         self.antispikes_k * self.antispikes_type.calc(points_1, points_2)
     }
 }
@@ -597,6 +581,8 @@ pub struct ExponentFunction {
     pub shift: float,
 }
 impl ExponentFunction {
+    pub const AMPLITUDE_SCALE: float = 0.001;
+
     pub const fn new(amplitude: float, tau: float, shift: float) -> Self {
         Self { amplitude, tau, shift }
     }
@@ -614,11 +600,11 @@ impl ExponentFunction {
     ///
     /// Unfortunately, no performance gain was measured.
     pub fn eval_at_(amplitude: float, tau: float, shift: float, x: float) -> float {
-        let in_exp: float = tau * (x - shift);
+        let in_exp: float = (x - shift) / tau;
         // if (if self.tau <= 0. { 1. } else { -1. }) * (x - self.shift) > 0. {
         if in_exp <= 0. {
             // self.amplitude * exp(self.tau * (x - self.shift))
-            amplitude * exp(in_exp)
+            Self::AMPLITUDE_SCALE * amplitude * exp(in_exp)
         } else {
             0.
         }
@@ -804,120 +790,124 @@ impl FitAlgorithmType {
         }
 
         let mut fit_residue_evals = 0;
-        unimplemented!("must rewrite using new architecture");
+        // unimplemented!("must rewrite using all new methods and fields");
         // let mut params_prev_prev: Params = vec![INITIAL_VALUES+INITIAL_SIMPLEX_SCALE; f_params_amount];
         // let mut params_prev_this: Params = vec![INITIAL_VALUES-INITIAL_SIMPLEX_SCALE; f_params_amount];
-        // //                                 data  residue
-        // let mut params_and_ress_vec: Vec<(Params, float)> = Vec::with_capacity(f_params_amount+1);
-        // trait ExtParamsAndRessVec {
-        //     fn get_params(&self) -> Vec<Params>;
-        //     fn get_residues(&self) -> Vec<float>;
-        // }
-        // impl ExtParamsAndRessVec for Vec<(Params, float)> {
-        //     fn get_params(&self) -> Vec<Params> {
-        //         self.iter().map(|p| p.0.clone()).collect()
-        //     }
-        //     fn get_residues(&self) -> Vec<float> {
-        //         self.iter().map(|p| p.1).collect()
-        //     }
-        // }
-        // trait ExtParamsVec {
-        //     fn get_all_except(&self, index: usize) -> Vec<Params>;
-        // }
-        // impl ExtParamsVec for Vec<Params> {
-        //     fn get_all_except(&self, index: usize) -> Vec<Params> {
-        //         let mut self_ = self.clone();
-        //         self_.remove(index);
-        //         self_
-        //     }
-        // }
-        // trait ExtParams {
-        //     fn mirror_relative_to(self, others: Vec<Params>) -> Params;
-        //     fn lerp(self, other: Params, t: float) -> Params;
-        // }
-        // impl ExtParams for Params {
-        //     fn mirror_relative_to(self, others: Vec<Params>) -> Params {
-        //         let others_avg: Params = others.avg();
-        //         self.add(others_avg.sub(self.clone()).scale(2.))
-        //     }
-        //     fn lerp(self, other: Params, t: float) -> Params {
-        //         self.scale(t).add(other.scale(1.-t))
-        //     }
-        // }
-        // let mut params_and_ress_vec_push = |params: Params| {
-        //     let fit_residue = deconvolution_data.calc_residue_function(&params);
-        //     fit_residue_evals += 1;
-        //     params_and_ress_vec.push((params, fit_residue));
-        // };
+        let mut params_prev_prev: Params = deconvolution_data.get_initial_params().into_iter().map(|p| p + INITIAL_SIMPLEX_SCALE).collect::<Vec<float>>();
+        let mut params_prev_this: Params = deconvolution_data.get_initial_params().into_iter().map(|p| p - INITIAL_SIMPLEX_SCALE).collect::<Vec<float>>();
+        //                                 data  residue
+        let mut params_and_ress_vec: Vec<(Params, float)> = Vec::with_capacity(f_params_amount+1);
+        trait ExtParamsAndRessVec {
+            fn get_params(&self) -> Vec<Params>;
+            fn get_residues(&self) -> Vec<float>;
+        }
+        impl ExtParamsAndRessVec for Vec<(Params, float)> {
+            fn get_params(&self) -> Vec<Params> {
+                self.iter().map(|p| p.0.clone()).collect()
+            }
+            fn get_residues(&self) -> Vec<float> {
+                self.iter().map(|p| p.1).collect()
+            }
+        }
+        trait ExtParamsVec {
+            fn get_all_except(&self, index: usize) -> Vec<Params>;
+        }
+        impl ExtParamsVec for Vec<Params> {
+            fn get_all_except(&self, index: usize) -> Vec<Params> {
+                let mut self_ = self.clone();
+                self_.remove(index);
+                self_
+            }
+        }
+        trait ExtParams {
+            fn mirror_relative_to(self, others: Vec<Params>) -> Params;
+            fn lerp(self, other: Params, t: float) -> Params;
+        }
+        impl ExtParams for Params {
+            fn mirror_relative_to(self, others: Vec<Params>) -> Params {
+                let others_avg: Params = others.avg();
+                self.add(others_avg.sub(self.clone()).scale(2.))
+            }
+            fn lerp(self, other: Params, t: float) -> Params {
+                self.scale(t).add(other.scale(1.-t))
+            }
+        }
+        let mut params_and_ress_vec_push = |params: Params| {
+            let fit_residue = deconvolution_data.calc_residue_function(&params);
+            fit_residue_evals += 1;
+            params_and_ress_vec.push((params, fit_residue));
+        };
         // params_and_ress_vec_push(vec![INITIAL_VALUES-INITIAL_SIMPLEX_SCALE/(f_params_amount as float); f_params_amount]);
-        // for i in 0..f_params_amount {
-        //     let mut params = vec![INITIAL_VALUES; f_params_amount];
-        //     params[i] += INITIAL_SIMPLEX_SCALE;
-        //     params_and_ress_vec_push(params);
-        // }
-        // assert_eq!(f_params_amount+1, params_and_ress_vec.len());
-        // assert_eq!(f_params_amount, params_prev_this.len());
-        // while !is_close_enough(&params_prev_this, &params_prev_prev) && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
-        //     let index_of_max = params_and_ress_vec.get_residues().index_of_max();
-        //     if index_of_max.is_none() { return Err("`fit_residue` at all `params_vec` is NaN or Inf") }
-        //     // if index_of_max.is_none() { return None }
-        //     let index_of_max = index_of_max.unwrap();
+        params_and_ress_vec_push(deconvolution_data.get_initial_params().into_iter().map(|p| p - INITIAL_SIMPLEX_SCALE/(f_params_amount as float)).collect::<Vec<float>>());
+        for i in 0..f_params_amount {
+            // let mut params = vec![INITIAL_VALUES; f_params_amount];
+            let mut params = deconvolution_data.get_initial_params();
+            params[i] += INITIAL_SIMPLEX_SCALE;
+            params_and_ress_vec_push(params);
+        }
+        assert_eq!(f_params_amount+1, params_and_ress_vec.len());
+        assert_eq!(f_params_amount, params_prev_this.len());
+        while !is_close_enough(&params_prev_this, &params_prev_prev) && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
+            let index_of_max = params_and_ress_vec.get_residues().index_of_max();
+            if index_of_max.is_none() { return Err("`fit_residue` at all `params_vec` is NaN or Inf") }
+            // if index_of_max.is_none() { return None }
+            let index_of_max = index_of_max.unwrap();
 
-        //     let (params_max, value_at_params_max) = params_and_ress_vec[index_of_max].clone();
-        //     let params_other: Vec<Params> = params_and_ress_vec.get_params().get_all_except(index_of_max);
-        //     // assert_eq!(f_params_amount, params_other.len());
+            let (params_max, value_at_params_max) = params_and_ress_vec[index_of_max].clone();
+            let params_other: Vec<Params> = params_and_ress_vec.get_params().get_all_except(index_of_max);
+            // assert_eq!(f_params_amount, params_other.len());
 
-        //     let params_symmetric = params_max.clone().mirror_relative_to(params_other.clone());
-        //     let value_at_params_symmetric = if deconvolution_data.is_params_ok(&params_symmetric) {
-        //         fit_residue_evals += 1;
-        //         deconvolution_data.calc_residue_function(&params_symmetric)
-        //     } else {
-        //         float::NAN
-        //     };
+            let params_symmetric = params_max.clone().mirror_relative_to(params_other.clone());
+            let value_at_params_symmetric = if deconvolution_data.is_params_ok(&params_symmetric) {
+                fit_residue_evals += 1;
+                deconvolution_data.calc_residue_function(&params_symmetric)
+            } else {
+                float::NAN
+            };
 
-        //     params_prev_prev = params_prev_this;
-        //     params_and_ress_vec[index_of_max] = if value_at_params_symmetric < value_at_params_max && value_at_params_symmetric.is_finite() {
-        //         (params_symmetric, value_at_params_symmetric)
-        //     } else {
-        //         let mut option_params_value: Option<(Params, float)> = None;
-        //         for lerp_t in LERP_TS {
-        //             let params_lerp = params_max.clone().lerp(params_other.clone().avg(), lerp_t);
-        //             let value_at_params_lerp = if deconvolution_data.is_params_ok(&params_lerp) {
-        //                 fit_residue_evals += 1;
-        //                 deconvolution_data.calc_residue_function(&params_lerp)
-        //             } else {
-        //                 float::NAN
-        //             };
-        //             if value_at_params_lerp.is_finite() {
-        //                 option_params_value = Some((params_lerp, value_at_params_lerp));
-        //                 break
-        //             }
-        //         }
-        //         match option_params_value {
-        //             None => return Err("`fit_residue` at all `LERP_TS` is NaN or Inf"),
-        //             // None => return None,
-        //             Some(params_value) => params_value
-        //         }
-        //     };
-        //     params_prev_this = params_and_ress_vec[index_of_max].0.clone();
-        // }
-        // if fit_residue_evals >= FIT_RESIDUE_EVALS_MAX {
-        //     if DEBUG {
-        //         println!("{}", "!".repeat(21));
-        //         println!("HIT MAX_ITERS!!!");
-        //         press_enter_to_continue();
-        //     }
-        //     return Err("hit max evals");
-        //     // return None;
-        // }
-        // let points = params_and_ress_vec.get_params().avg();
-        // let fit_residue = deconvolution_data.calc_residue_function(&points);
-        // fit_residue_evals += 1;
-        // Ok(FitResults {
-        //     params: points,
-        //     fit_residue,
-        //     fit_residue_evals,
-        // })
+            params_prev_prev = params_prev_this;
+            params_and_ress_vec[index_of_max] = if value_at_params_symmetric < value_at_params_max && value_at_params_symmetric.is_finite() {
+                (params_symmetric, value_at_params_symmetric)
+            } else {
+                let mut option_params_value: Option<(Params, float)> = None;
+                for lerp_t in LERP_TS {
+                    let params_lerp = params_max.clone().lerp(params_other.clone().avg(), lerp_t);
+                    let value_at_params_lerp = if deconvolution_data.is_params_ok(&params_lerp) {
+                        fit_residue_evals += 1;
+                        deconvolution_data.calc_residue_function(&params_lerp)
+                    } else {
+                        float::NAN
+                    };
+                    if value_at_params_lerp.is_finite() {
+                        option_params_value = Some((params_lerp, value_at_params_lerp));
+                        break
+                    }
+                }
+                match option_params_value {
+                    None => return Err("`fit_residue` at all `LERP_TS` is NaN or Inf"),
+                    // None => return None,
+                    Some(params_value) => params_value
+                }
+            };
+            params_prev_this = params_and_ress_vec[index_of_max].0.clone();
+        }
+        if fit_residue_evals >= FIT_RESIDUE_EVALS_MAX {
+            if DEBUG {
+                println!("{}", "!".repeat(21));
+                println!("HIT MAX_ITERS!!!");
+                press_enter_to_continue();
+            }
+            return Err("hit max evals");
+            // return None;
+        }
+        let points = params_and_ress_vec.get_params().avg();
+        let fit_residue = deconvolution_data.calc_residue_function(&points);
+        fit_residue_evals += 1;
+        Ok(FitResults {
+            params: points,
+            fit_residue,
+            fit_residue_evals,
+        })
     }
 
 }
