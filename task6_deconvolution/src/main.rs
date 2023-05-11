@@ -172,18 +172,19 @@ fn main() {
         file_instrument.file_stem().unwrap().to_str().unwrap(),
         file_spectrum.file_stem().unwrap().to_str().unwrap()
     ));
-    let convolved_points: Vec<float> = match deconvolution_data.deconvolution {
-        Deconvolution::PerPoint { .. } => convolve_per_point(
-            &deconvolution_data.instrument.points,
-            &deconvolve_results.params,
-        ),
-        Deconvolution::Exponents { .. } => convolve_exponents(
-            &deconvolution_data.instrument.points,
-            &deconvolve_results.params,
-            deconvolution_data.measured.points.len(),
-        ),
-        Deconvolution::Fourier {} => unimplemented!(),
-    };
+    // let convolved_points: Vec<float> = match deconvolution_data.deconvolution {
+    //     Deconvolution::PerPoint { .. } => convolve_per_point(
+    //         &deconvolution_data.instrument.points,
+    //         &deconvolve_results.params,
+    //     ),
+    //     Deconvolution::Exponents { .. } => convolve_exponents(
+    //         &deconvolution_data.instrument.points,
+    //         &deconvolve_results.params,
+    //         deconvolution_data.measured.points.len(),
+    //     ),
+    //     Deconvolution::Fourier {} => unimplemented!(),
+    // };
+    let convolved_points: Vec<float> = deconvolution_data.convolve(&deconvolve_results.params);
     let convolved = Spectrum {
         points: convolved_points,
         x_start: deconvolution_data.measured.x_start,
@@ -316,22 +317,14 @@ impl<'a> DeconvolutionData<'a> {
     /// - Exponents: list of (amplitude, tau, shift)
     /// - Fourier: unimplemented
     pub fn calc_residue_function(&self, params: &Vec<float>) -> float {
+        let points_convolved: Vec<float> = self.convolve(params);
         match &self.deconvolution {
             Deconvolution::PerPoint { diff_function_type, antispikes, .. } => {
                 assert_eq!(self.measured.points.len(), params.len());
-                let points_spectrum_original = params;
-                let points_convolved = convolve_per_point(&self.instrument.points, points_spectrum_original);
                 diff_function_type.calc_diff_with_antispikes(&self.measured.points, &points_convolved, antispikes)
             }
             Deconvolution::Exponents { diff_function_type, exponents_amount, .. } => {
                 assert_eq!(exponents_amount * 3, params.len());
-                // let exponents: Vec<ExponentFunction> = params
-                //     .chunks(3).into_iter()
-                //     .map(|parts| ExponentFunction::new(parts[0], parts[1], parts[2]))
-                //     .collect();
-                // assert_eq!(*exponents_amount, exponents.len());
-                let points_convolved = convolve_exponents(&self.instrument.points, &params, self.measured.points.len());
-                // let points_convolved = convolve_exponents(&self.points_instrument, params, self.points_spectrum.len());
                 diff_function_type.calc_diff(&self.measured.points, &points_convolved)
             }
             Deconvolution::Fourier {} => {
@@ -370,53 +363,51 @@ impl<'a> DeconvolutionData<'a> {
             Deconvolution::Fourier {} => unimplemented!(),
         }
     }
-}
 
-
-pub fn convolve_exponents(
-    points_instrument: &Vec<float>,
-    params: &Vec<float>,
-    points_spectrum_convolved_len: usize,
-) -> Vec<float> {
-    let mut points_spectrum_original = vec![0.; points_spectrum_convolved_len];
-    let exponents: Vec<ExponentFunction> = params
-        .chunks(3).into_iter()
-        .map(|parts| ExponentFunction::new(parts[0], parts[1], parts[2]))
-        .collect();
-    for i in 0..points_spectrum_convolved_len {
-        let sum: float = exponents.iter()
-            .map(|exponent| exponent.eval_at(i as float))
-            .sum();
-        // let sum: float = params
-        //     .chunks(3).into_iter()
-        //     .map(|parts| {
-        //         let x: float = i as float / points_spectrum_convolved_len as float;
-        //         // let exp_func = ExponentFunction::new(parts[0], parts[1], parts[2]);
-        //         // exp_func.eval_at(x)
-        //         ExponentFunction::eval_at_static(parts[0], parts[1], parts[2], x)
-        //     })
-        //     .sum();
-        points_spectrum_original[i] = sum;
+    pub fn convolve(&self, params: &Vec<float>) -> Vec<float> {
+        let points_convolved: Vec<float> = match self.deconvolution {
+            Deconvolution::PerPoint { .. } => convolve_by_points(&self.instrument.points, params),
+            Deconvolution::Exponents { .. } => {
+                let points_spectrum_convolved_len: usize = self.measured.points.len();
+                let mut points_spectrum_original = vec![0.; points_spectrum_convolved_len];
+                let exponents: Vec<ExponentFunction> = params
+                    .chunks(3).into_iter()
+                    .map(|parts| ExponentFunction::new(parts[0], parts[1], parts[2]))
+                    .collect();
+                for i in 0..points_spectrum_convolved_len {
+                    let sum: float = exponents.iter()
+                        .map(|exponent| exponent.eval_at(i as float))
+                        .sum();
+                    points_spectrum_original[i] = sum;
+                }
+                let points_convolved = convolve_by_points(&self.instrument.points, &points_spectrum_original);
+                points_convolved
+            }
+            Deconvolution::Fourier {} => unimplemented!(),
+        };
+        assert_eq!(self.measured.points.len(), points_convolved.len());
+        points_convolved
     }
-    let points_convolved = convolve_per_point(points_instrument, &points_spectrum_original);
-    points_convolved
 }
 
 
-pub fn convolve_per_point(points_instrument: &Vec<float>, points_spectrum_original: &Vec<float>) -> Vec<float> {
-    assert!(points_instrument.len() % 2 == 1, "points_instrument.len() = {}", points_instrument.len()); // why?
-    let mut points_convolved = vec![0.; points_spectrum_original.len()];
-    for i in 0..points_spectrum_original.len() {
+/// Must be used only in `tests` & `DeconvolutionData::convolve()`.
+pub fn convolve_by_points(points_instrument: &Vec<float>, points_deconvolved: &Vec<float>) -> Vec<float> {
+    let points_instrument_len: usize = points_instrument.len();
+    let points_deconvolved_len: usize = points_deconvolved.len();
+    assert!(points_instrument_len % 2 == 1, "points_instrument_len = {}", points_instrument_len); // why?
+    let mut points_convolved = vec![0.; points_deconvolved_len];
+    for i in 0..points_deconvolved_len {
         let mut point_convolved = 0.;
-        for j in 0..points_instrument.len() {
-            let d: i32 = j as i32 - points_instrument.len() as i32 / 2;
+        for j in 0..points_instrument_len {
+            let d: i32 = j as i32 - points_instrument_len as i32 / 2;
             let pii: i32 = j as i32;     // points_instrument_index
             let psi: i32 = i as i32 - d; // points_spectrum_index
-            let is_pii_in_range: bool = 0 <= pii && pii < points_instrument.len() as i32;
-            let is_psi_in_range: bool = 0 <= psi && psi < points_spectrum_original.len() as i32;
+            let is_pii_in_range: bool = 0 <= pii && pii < points_instrument_len as i32;
+            let is_psi_in_range: bool = 0 <= psi && psi < points_deconvolved_len as i32;
             if is_pii_in_range && is_psi_in_range {
-                let point_instrument        = points_instrument       [pii as usize];
-                let point_spectrum_original = points_spectrum_original[psi as usize];
+                let point_instrument        = points_instrument [pii as usize];
+                let point_spectrum_original = points_deconvolved[psi as usize];
                 point_convolved += point_instrument * point_spectrum_original;
             }
         }
@@ -1971,7 +1962,7 @@ mod tests {
 
     mod convolve {
         mod per_point {
-            use crate::{DiffFunctionType, convolve_per_point, float};
+            use crate::{DiffFunctionType, convolve_by_points, float};
             mod instrument_is_identity {
                 use super::*;
                 const POINTS_INSTRUMENT: [float; 1] = [1.];
@@ -1983,7 +1974,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -1996,7 +1987,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2009,7 +2000,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2026,7 +2017,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2039,7 +2030,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2052,7 +2043,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2073,7 +2064,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2086,7 +2077,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2099,7 +2090,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2116,7 +2107,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2129,7 +2120,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2142,7 +2133,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2163,7 +2154,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2176,7 +2167,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2189,7 +2180,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2206,7 +2197,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2219,7 +2210,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2232,7 +2223,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
                         let points_convolved_expected = points_spectrum_original.clone();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2253,7 +2244,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
                         let points_convolved_expected = [vec![0.; 9], vec![0.5, 1., 0.5], vec![0.; 9]].concat();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2266,7 +2257,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
                         let points_convolved_expected = [vec![1., 0.5], vec![0.; 19]].concat();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2279,7 +2270,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
                         let points_convolved_expected = [vec![0.; 19], vec![0.5, 1.]].concat();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2296,7 +2287,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
                         let points_convolved_expected = [vec![0.; 5], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 5]].concat();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2309,7 +2300,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
                         let points_convolved_expected = [vec![1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 11]].concat();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
@@ -2322,7 +2313,7 @@ mod tests {
                         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
                         let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
                         let points_convolved_expected = [vec![0.; 11], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1.]].concat();
-                        let points_convolved_actual = convolve_per_point(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                        let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
                         println!("points_convolved_expected = {:?}", points_convolved_expected);
                         println!("points_convolved_actual = {:?}", points_convolved_actual);
                         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
