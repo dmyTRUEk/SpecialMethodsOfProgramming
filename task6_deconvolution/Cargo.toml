@@ -1,6 +1,6 @@
 [package]
 name = "task6_deconvolution"
-version = "3.0.0"
+version = "4.0.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,4 +14,5 @@ strip = "debuginfo"
 #target-cpu = "native" -> RUSTFLAGS='-C target-cpu=native'
 
 [dependencies]
+rand = "0.8.5"
 rayon = "1.7.0"

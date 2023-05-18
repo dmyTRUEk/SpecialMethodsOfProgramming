@@ -8,11 +8,13 @@ use std::{
     path::Path,
 };
 
+use rand::{Rng, rngs::ThreadRng, thread_rng};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 
 mod deconvolution_params {
     use super::*;
+
     // pub const DECONVOLUTION: Deconvolution = Deconvolution::PerPoint {
     //     diff_function_type: DiffFunctionType::DySqr,
     //     // antispikes: None,
@@ -22,21 +24,51 @@ mod deconvolution_params {
     //     }),
     //     initial_value: 0.,
     // };
+
+    pub const EXPONENTS_AMOUNT: usize = 2;
     // pub const DECONVOLUTION: Deconvolution = Deconvolution::Exponents {
     //     diff_function_type: DiffFunctionType::DySqr,
-    //     exponents_amount: 2,
-    //     initial_values: &[
-    //         30., -30., -10.,
-    //         30., 2., 0.,
+    //     // exponents_amount: 2,
+    //     initial_values: [
+    //         // 30., -10., 30.,
+    //         // 30., 1., -2.,
+    //         1., 1., 1.,
+    //         1., 1., 1.,
     //     ],
     // };
-    pub const DECONVOLUTION: Deconvolution = Deconvolution::SatDecExp {
-        // WARNING: set `FIT_ALGORITHM_MIN_STEP` to `1e-3`.
+
+    // pub const DECONVOLUTION: Deconvolution = Deconvolution::SatExp_DecExp {
+    //     // WARNING?: set `FIT_ALGORITHM_MIN_STEP` to `1e-3`.
+    //     diff_function_type: DiffFunctionType::DySqr,
+    //     //               a   s   t1  t2
+    //     // initial_values: [1., 0., 1., 1.],
+    //     // initial_values: [0.04, -12., 1., 30.], // fr: 1.870
+    //     // initial_values: [1., 1., 1., 1.],
+    //     initial_values: [0.1, -10., 1., 10.],
+    // };
+
+    // pub const DECONVOLUTION: Deconvolution = Deconvolution::Two_SatExp_DecExp {
+    //     // WARNING?: set `FIT_ALGORITHM_MIN_STEP` to `1e-3`.
+    //     diff_function_type: DiffFunctionType::DySqr,
+    //     initial_values: [
+    //         100., -10., 100., 10.,
+    //         100., -10., 100., 10.,
+    //     ],
+    // };
+
+    // pub const DECONVOLUTION: Deconvolution = Deconvolution::SatExp_DecExpWithConst {
+    //     diff_function_type: DiffFunctionType::DySqr,
+    //     initial_values: [1., 0.01, 1., 1.],
+    // };
+
+    pub const DECONVOLUTION: Deconvolution = Deconvolution::SatExp_TwoDecExp {
         diff_function_type: DiffFunctionType::DySqr,
-        //               a   s   t1  t2
-        // initial_values: [1., 0., 1., 1.],
-        initial_values: [1., -10., 100., 10.],
+        initial_values: [0.1, 10., 0.01, 1., 1.],
     };
+
+    pub const TRY_DIFFERENT_INITIAL_VALUES_FOREVER: bool = true;
+    pub const INITIAL_VALUES_RANDOM_SCALE: float = 10.;
+    pub const CHANGE_SING_PROBABILITY: float = 0.1;
 }
 
 mod fit_params {
@@ -44,8 +76,9 @@ mod fit_params {
     // pub const INITIAL_VALUES: float = 0.0015;
     pub const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
     // pub const FIT_RESIDUE_GOAL   : float = 1e-1; // for Pattern Search
-    pub const FIT_ALGORITHM_MIN_STEP: float = 1e-3; // for Pattern Search & Downhill Simplex
-    pub const FIT_RESIDUE_EVALS_MAX : u64 = 100_000_000;
+    pub const FIT_ALGORITHM_MIN_STEP: float = 1e-4; // for Pattern Search & Downhill Simplex
+    pub const FIT_RESIDUE_EVALS_MAX : u64 = 1_000_000;
+    pub const FIT_RESIDUE_MAX_VALUE : float = 1e6;
 }
 
 mod patter_search_params {
@@ -90,81 +123,6 @@ fn main() {
     // }
     println!("FIT_RESIDUE_EVALS_MAX : {}", fit_params::FIT_RESIDUE_EVALS_MAX.to_string_underscore_separated());
 
-    let deconvolution_data: DeconvolutionData = DeconvolutionData {
-        instrument,
-        measured,
-        deconvolution: deconvolution_params::DECONVOLUTION,
-    }.aligned_steps_to_smaller();
-
-    let deconvolve_results = deconvolution_data.deconvolve(fit_params::FIT_ALGORITHM_TYPE);
-    dbg!(&deconvolve_results);
-    let deconvolve_results = deconvolve_results.unwrap();
-    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals.to_string_underscore_separated());
-
-    match deconvolution_params::DECONVOLUTION {
-        Deconvolution::PerPoint { .. } => {}
-        Deconvolution::Exponents { exponents_amount, .. } => {
-            println!(
-                "{}",
-                [
-                    r"f_{",
-                    &exponents_amount.to_string(),
-                    r"}\left(x\right)=",
-                    &deconvolve_results.params
-                        .chunks(3).into_iter()
-                        .map(|parts| {
-                            let (amplitude, tau, shift) = (parts[0], parts[1], parts[2]);
-                            assert_ne!(0., tau);
-                            [
-                                r"\left\{x",
-                                if tau < 0. { ">" } else { "<" },
-                                &format!("{shift:.2}"),
-                                r":\frac{",
-                                &format!("{amplitude:.2}"),
-                                r"}{",
-                                &format!("{inv_amp_sc:.0}", inv_amp_sc=1./ExponentFunction::AMPLITUDE_SCALE),
-                                r"}e^{\frac{x",
-                                if shift.is_sign_positive() { "+" } else { "" },
-                                &format!("{shift:.2}"),
-                                r"}{",
-                                &format!("{tau:.2}"),
-                                r"}},0\right\}",
-                            ].concat()
-                        })
-                        .reduce(|acc, el| format!("{acc}+{el}")).unwrap(),
-                ].concat()
-            );
-        }
-        Deconvolution::SatDecExp { .. } => {
-            let params = &deconvolve_results.params;
-            let (amplitude, shift, tau_1, tau_2) = (params[0], params[1], params[2], params[3]);
-            let neg_shift = -shift;
-            println!(
-                "{}",
-                [
-                    // y=a\left(1-e^{-\frac{x-s}{t_{1}}}\right)\left(e^{-\frac{x-s-d}{t_{2}}}\right)\left\{x>s\right\}
-                    r"y=",
-                    &format!("{:.3}", amplitude),
-                    r"\left(1-e^{-\frac{x",
-                    if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{:.3}", neg_shift),
-                    r"}{",
-                    &format!("{:.3}", tau_1),
-                    r"}}\right)\left(e^{-\frac{x",
-                    // -s
-                    if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{:.3}", neg_shift),
-                    r"}{",
-                    &format!("{:.3}", tau_2),
-                    r"}}\right)\left\{x>",
-                    &format!("{:.3}", shift),
-                    r"\right\}",
-                ].concat()
-            );
-        }
-        Deconvolution::Fourier {} => unimplemented!(),
-    }
-
     let file_instrument = Path::new(filepathstr_instrument);
     let file_spectrum   = Path::new(filepathstr_measured);
     assert_eq!(
@@ -176,6 +134,108 @@ fn main() {
         file_instrument.file_stem().unwrap().to_str().unwrap(),
         file_spectrum.file_stem().unwrap().to_str().unwrap()
     ));
+    let filepathstr_output: &str = filepath_output.to_str().unwrap();
+    let filepath_output_convolved = file_spectrum.with_file_name(format!(
+        "results_{}_{}_convolved.dat",
+        file_instrument.file_stem().unwrap().to_str().unwrap(),
+        file_spectrum.file_stem().unwrap().to_str().unwrap()
+    ));
+    let filepathstr_output_convolved: &str = filepath_output_convolved.to_str().unwrap();
+
+    let deconvolution = deconvolution_params::DECONVOLUTION;
+
+    let deconvolution_data: DeconvolutionData = DeconvolutionData {
+        instrument,
+        measured,
+        deconvolution,
+    }.aligned_steps_to_smaller();
+
+    // TODO!: firstly deconvolve with default params, and then random.
+
+    if !deconvolution_params::TRY_DIFFERENT_INITIAL_VALUES_FOREVER {
+        let deconvolve_results = deconvolution_data.deconvolve(fit_params::FIT_ALGORITHM_TYPE);
+        match deconvolve_results {
+            Err(err) => println!("ERROR: {}", err),
+            Ok(deconvolution_results_unwrapped) => {
+                output_results(
+                    &deconvolution_data,
+                    deconvolution_results_unwrapped,
+                    filepathstr_output,
+                    filepathstr_output_convolved,
+                );
+            }
+        }
+    }
+    else {
+        let mut rng = thread_rng();
+        let mut best_fit_residue: float = float::MAX;
+        let mut initial_values_tried: u64 = 0;
+        loop {
+            initial_values_tried += 1;
+            let mut deconvolution_data = deconvolution_data.clone();
+            fn randomize_array<const N: usize>(array: &mut [float; N], rng: &mut ThreadRng) {
+                for i in 0..N {
+                    let is_change_sign: bool = rng.gen_bool(deconvolution_params::CHANGE_SING_PROBABILITY);
+                    let random_scale: float = rng.gen_range(
+                        1./deconvolution_params::INITIAL_VALUES_RANDOM_SCALE ..= deconvolution_params::INITIAL_VALUES_RANDOM_SCALE
+                    );
+                    array[i] *= if is_change_sign { -1. } else { 1. } * random_scale;
+                }
+            }
+            match deconvolution_data.deconvolution {
+                Deconvolution::PerPoint { .. } => panic!("there is no need to try different initial params"),
+                Deconvolution::Exponents { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
+                Deconvolution::SatExp_DecExp { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
+                Deconvolution::Two_SatExp_DecExp { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
+                Deconvolution::SatExp_DecExpWithConst { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
+                Deconvolution::SatExp_TwoDecExp { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
+                Deconvolution::Fourier {} => unimplemented!(),
+            }
+            let deconvolution_results = deconvolution_data.deconvolve(fit_params::FIT_ALGORITHM_TYPE);
+            match deconvolution_results {
+                Ok(deconvolution_results_unwrapped) if deconvolution_results_unwrapped.fit_residue < best_fit_residue => {
+                    best_fit_residue = deconvolution_results_unwrapped.fit_residue;
+                    println!("{}", "-".repeat(42));
+                    println!("initial_values_tried: {}", initial_values_tried);
+                    // let Deconvolution::Exponents { initial_values, .. } = deconvolution_data.deconvolution else { unreachable!() };
+                    // dbg!(initial_values);
+                    output_results(
+                        &deconvolution_data,
+                        deconvolution_results_unwrapped,
+                        filepathstr_output,
+                        filepathstr_output_convolved,
+                    );
+                    println!("{}", "-".repeat(42));
+                }
+                _ => {
+                    println!(
+                        "fit_residue: {}",
+                        deconvolution_results.as_ref()
+                            .map(|dr| format!("{:.4}", dr.fit_residue))
+                            .unwrap_or_else(|err| format!("Error: {err}"))
+                    );
+                },
+            }
+        }
+    }
+
+}
+
+
+fn output_results(
+    deconvolution_data: &DeconvolutionData,
+    deconvolution_results: FitResults,
+    filepathstr_output: &str,
+    filepathstr_output_convolved: &str,
+) {
+    dbg!(&deconvolution_results);
+    // println!("fit_residue_evals = {}", deconvolution_results.fit_residue_evals.to_string_underscore_separated());
+
+    let params = &deconvolution_results.params;
+
+    if let Ok(desmos_function_str) = deconvolution_data.deconvolution.to_desmos_function(&params) {
+        println!("{}", desmos_function_str);
+    }
 
     // let mut file_output = File::create(filepath_output).unwrap();
     // assert_eq!((1010..=1089).count(), deconvolve_results.points.len());
@@ -183,73 +243,110 @@ fn main() {
     // for (x, point) in (1010..=1089).zip(deconvolve_results.points) {
     //     writeln!(file_output, "{x}\t{p}", p=point).unwrap();
     // }
-    match deconvolution_params::DECONVOLUTION {
+    match deconvolution_data.deconvolution {
         Deconvolution::PerPoint { .. } => {
             let sd_deconvolved = Spectrum {
-                points: deconvolve_results.params.clone(),
+                points: deconvolution_results.params.clone(),
                 step: deconvolution_data.get_step(),
                 x_start: deconvolution_data.measured.x_start,
             };
-            sd_deconvolved.write_to_file(filepath_output.to_str().unwrap());
+            sd_deconvolved.write_to_file(filepathstr_output);
         }
         Deconvolution::Exponents { .. } => {
-            let mut file_output = File::create(filepath_output).unwrap();
+            let mut file_output = File::create(filepathstr_output).unwrap();
             writeln!(file_output, "exponents params:").unwrap();
-            for parts in deconvolve_results.params.chunks(3) {
-                let (amplitude, tau, shift) = (parts[0], parts[1], parts[2]);
-                writeln!(file_output, "{amplitude}\t{tau}\t{shift}").unwrap();
+            for parts in deconvolution_results.params.chunks(3) {
+                let (amplitude, shift, tau) = (parts[0], parts[1], parts[2]);
+                writeln!(file_output, "{amplitude}\t{shift}\t{tau}").unwrap();
             }
         }
-        Deconvolution::SatDecExp { .. } => {
-            let mut file_output = File::create(filepath_output).unwrap();
+        Deconvolution::SatExp_DecExp { .. } => {
+            let mut file_output = File::create(filepathstr_output).unwrap();
             writeln!(file_output, "saturated decaying exponential params:").unwrap();
-            let params = &deconvolve_results.params;
-            let (amplitude, shift, tau_1, tau_2) = (params[0], params[1], params[2], params[3]);
-            writeln!(file_output, "{amplitude}\t{shift}\t{tau_1}\t{tau_2}").unwrap();
+            let (amplitude, shift, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+            writeln!(file_output, "{amplitude}\t{shift}\t{tau_a}\t{tau_b}").unwrap();
+        }
+        Deconvolution::Two_SatExp_DecExp { .. } => {
+            let mut file_output = File::create(filepathstr_output).unwrap();
+            writeln!(file_output, "two saturated decaying exponential params:").unwrap();
+            let (amplitude_1, shift_1, tau_a1, tau_b1) = (params[0], params[1], params[2], params[3]);
+            let (amplitude_2, shift_2, tau_a2, tau_b2) = (params[4], params[5], params[6], params[7]);
+            writeln!(file_output, "{amplitude_1}\t{shift_1}\t{tau_a1}\t{tau_b1}").unwrap();
+            writeln!(file_output, "{amplitude_2}\t{shift_2}\t{tau_a2}\t{tau_b2}").unwrap();
+        }
+        Deconvolution::SatExp_DecExpWithConst { .. } => {
+            let mut file_output = File::create(filepathstr_output).unwrap();
+            writeln!(file_output, "saturated decaying exponential params:").unwrap();
+            let (shift, height, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+            writeln!(file_output, "{shift}\t{height}\t{tau_a}\t{tau_b}").unwrap();
+        }
+        Deconvolution::SatExp_TwoDecExp { .. } => {
+            let mut file_output = File::create(filepathstr_output).unwrap();
+            writeln!(file_output, "saturated decaying exponential params:").unwrap();
+            let (amplitude, shift, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4]);
+            writeln!(file_output, "{amplitude}\t{shift}\t{tau_a}\t{tau_b}\t{tau_c}").unwrap();
         }
         Deconvolution::Fourier {} => unimplemented!(),
     }
 
-    let filepath_output_convolved = file_spectrum.with_file_name(format!(
-        "results_{}_{}_convolved.dat",
-        file_instrument.file_stem().unwrap().to_str().unwrap(),
-        file_spectrum.file_stem().unwrap().to_str().unwrap()
-    ));
-    let convolved_points: Vec<float> = deconvolution_data.convolve_from_params(&deconvolve_results.params);
+    let convolved_points: Vec<float> = deconvolution_data.convolve_from_params(&deconvolution_results.params);
     let convolved = Spectrum {
         points: convolved_points,
         x_start: deconvolution_data.measured.x_start,
         step: deconvolution_data.measured.step,
     };
-    convolved.write_to_file(filepath_output_convolved.to_str().unwrap());
+    convolved.write_to_file(filepathstr_output_convolved);
 }
 
 
 type DeconvolutionResultOrError = FitResultsOrError;
 
 /// Deconvolution type and it's corresponding params.
-#[derive(Debug, PartialEq)]
-pub enum Deconvolution<'a> {
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum Deconvolution {
     /// aka Simple
+    /// [y0, y1, y2, ...]
     PerPoint {
         diff_function_type: DiffFunctionType,
         antispikes: Option<Antispikes>,
-        initial_value: float,
+        initial_value: float, // [y0, y1, y2, ...]
     },
+    /// a1*exp(-(x-s1)/t1) + ...
     Exponents {
         diff_function_type: DiffFunctionType,
-        exponents_amount: usize,
-        initial_values: &'a [float],
+        // exponents_amount: usize,
+        // initial_values: &'a [float],
+        // initial_values: Vec<float>,
+        initial_values: [float; 3*deconvolution_params::EXPONENTS_AMOUNT], // ai, si, ti, ...
     },
-    SatDecExp {
+    /// a * (1-exp(-(x-s)/ta)) * exp(-(x-s)/tb)
+    SatExp_DecExp {
         diff_function_type: DiffFunctionType,
-        initial_values: [float; 4],
+        initial_values: [float; 4], // a, s, ta, tb
+    },
+    /// a1 * (1-exp(-(x-s1)/ta1)) * exp(-(x-s1)/tb1) + a2 * (1-exp(-(x-s2)/ta2)) * exp(-(x-s2)/tb2)
+    Two_SatExp_DecExp {
+        diff_function_type: DiffFunctionType,
+        initial_values: [float; 8], // a1, s1, ta1, tb1, a2, s2, ta2, tb2
+    },
+    /// (1-exp(-(x-s)/ta)) * (exp(-(x-s)/tb) + h)
+    SatExp_DecExpWithConst {
+        diff_function_type: DiffFunctionType,
+        initial_values: [float; 4], // s, h, ta, tb
+    },
+    /// (1-exp(-(x-s)/ta)) * (exp(-(x-s)/tb) + exp(-(x-s)/tc))
+    SatExp_TwoDecExp {
+        diff_function_type: DiffFunctionType,
+        initial_values: [float; 5], // a, s, ta, tb, tc
     },
     Fourier {
         // unimplemented
     },
 }
-impl<'a> Deconvolution<'a> {
+impl<'a> Deconvolution {
+    pub const SAT_DEC_EXP_AMPLITUDE_SCALE: float = 1. / 1.;
+
     pub fn params_to_points(
         &self,
         params: &Vec<float>,
@@ -273,34 +370,84 @@ impl<'a> Deconvolution<'a> {
 
         match self {
             Self::PerPoint { .. } => params.to_vec(),
-            Self::Exponents { exponents_amount, .. } => {
-                assert_eq!(exponents_amount * 3, params.len());
+            Self::Exponents { .. } => {
+                assert_eq!(deconvolution_params::EXPONENTS_AMOUNT * 3, params.len());
                 let exponents: Vec<ExponentFunction> = params
                     .chunks(3).into_iter()
-                    .map(|parts| ExponentFunction::new(parts[0], parts[1], parts[2]))
+                    .map(|parts| ExponentFunction { amplitude: parts[0], shift: parts[1], tau: parts[2] } )
                     .collect();
                 let mut points = vec![0.; points_len];
                 for i in 0..points_len {
                     let x: float = i_to_x(i, points_len, (x_start, x_end));
                     let sum: float = exponents.iter()
-                        .map(|exponent| exponent.eval_at(x)) // TODO: div by points_len?
+                        .map(|exponent| exponent.eval_at(x))
                         .sum();
                     points[i] = sum;
                 }
                 points
             }
-            Self::SatDecExp { .. } => {
+            Self::SatExp_DecExp { .. } => {
                 let mut points = vec![0.; points_len];
-                let (amplitude, shift, tau_1, tau_2) = (params[0], params[1], params[2], params[3]);
+                let (amplitude, shift, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
                 for i in 0..points_len {
                     let x: float = i_to_x(i, points_len, (x_start, x_end));
                     let x_m_shift: float = x - shift;
-                    // let y = if x >= shift {
+                    // let y = if x >= shift
                     let y = if x_m_shift >= 0. {
-                        // "optimization" (don't work): precalc `1/tau_1` & `1/tau_2`.
-                        // amplitude * (1. - exp(-(x-shift)/tau_1)) * exp(-(x-shift)/tau_2)
-                        amplitude * (1. - exp(-(x_m_shift)/tau_1)) * exp(-(x_m_shift)/tau_2)
-                        // amplitude * (1. - exp(-(x_m_shift)*inv_tau_1)) * exp(-(x_m_shift)*inv_tau_2)
+                        // "optimization" (don't work): precalc `1/tau_a` & `1/tau_b`.
+                        Self::SAT_DEC_EXP_AMPLITUDE_SCALE * amplitude * (1. - exp(-x_m_shift/tau_a)) * exp(-x_m_shift/tau_b)
+                    } else {
+                        0.
+                    };
+                    points[i] = y;
+                }
+                points
+            }
+            Self::Two_SatExp_DecExp { .. } => {
+                let mut points = vec![0.; points_len];
+                let (amplitude_1, shift_1, tau_a1, tau_b1) = (params[0], params[1], params[2], params[3]);
+                let (amplitude_2, shift_2, tau_a2, tau_b2) = (params[4], params[5], params[6], params[7]);
+                for i in 0..points_len {
+                    let x: float = i_to_x(i, points_len, (x_start, x_end));
+                    let x_m_shift_1: float = x - shift_1;
+                    let x_m_shift_2: float = x - shift_2;
+                    let y1 = if x_m_shift_1 >= 0. {
+                        Self::SAT_DEC_EXP_AMPLITUDE_SCALE * amplitude_1 * (1. - exp(-(x_m_shift_1)/tau_a1)) * exp(-(x_m_shift_1)/tau_b1)
+                    } else {
+                        0.
+                    };
+                    let y2 = if x_m_shift_2 >= 0. {
+                        Self::SAT_DEC_EXP_AMPLITUDE_SCALE * amplitude_2 * (1. - exp(-(x_m_shift_2)/tau_a2)) * exp(-(x_m_shift_2)/tau_b2)
+                    } else {
+                        0.
+                    };
+                    points[i] = y1 + y2;
+                }
+                points
+            }
+            Self::SatExp_DecExpWithConst { .. } => {
+                let mut points = vec![0.; points_len];
+                let (shift, height, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+                for i in 0..points_len {
+                    let x: float = i_to_x(i, points_len, (x_start, x_end));
+                    let x_m_shift: float = x - shift;
+                    let y = if x_m_shift >= 0. {
+                        (1. - exp(-x_m_shift/tau_a)) * (exp(-x_m_shift/tau_b) + height)
+                    } else {
+                        0.
+                    };
+                    points[i] = y;
+                }
+                points
+            }
+            Self::SatExp_TwoDecExp { .. } => {
+                let mut points = vec![0.; points_len];
+                let (amplitude, shift, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4]);
+                for i in 0..points_len {
+                    let x: float = i_to_x(i, points_len, (x_start, x_end));
+                    let x_m_shift: float = x - shift;
+                    let y = if x_m_shift >= 0. {
+                        amplitude * (1. - exp(-x_m_shift/tau_a)) * (exp(-x_m_shift/tau_b) + exp(-x_m_shift/tau_c))
                     } else {
                         0.
                     };
@@ -311,16 +458,165 @@ impl<'a> Deconvolution<'a> {
             Self::Fourier {} => unimplemented!(),
         }
     }
+
+    pub fn to_desmos_function(&self, params: &Vec<float>) -> Result<String, &'static str> {
+        match self {
+            Deconvolution::PerPoint { .. } => Err("impossible to build this function"),
+            Deconvolution::Exponents { .. } => {
+                Ok([
+                    r"f_{",
+                    &deconvolution_params::EXPONENTS_AMOUNT.to_string(),
+                    r"}\left(x\right)=",
+                    &params
+                        .chunks(3).into_iter()
+                        .map(|parts| {
+                            let (amplitude, shift, tau) = (parts[0], parts[1], parts[2]);
+                            let neg_shift = -shift;
+                            assert_ne!(0., tau);
+                            [
+                                r"\left\{x",
+                                if tau > 0. { ">" } else { "<" },
+                                &format!("{neg_shift:.3}"),
+                                r":\frac{",
+                                &format!("{amplitude:.3}"),
+                                r"}{",
+                                &format!("{inv_amp_sc:.0}", inv_amp_sc=1./ExponentFunction::AMPLITUDE_SCALE),
+                                r"}e^{-\frac{x",
+                                if neg_shift.is_sign_positive() { "+" } else { "" },
+                                &format!("{neg_shift:.3}"),
+                                r"}{",
+                                &format!("{tau:.3}"),
+                                r"}},0\right\}",
+                            ].concat()
+                        })
+                        .reduce(|acc, el| format!("{acc}+{el}")).unwrap(),
+                ].concat())
+            }
+            Deconvolution::SatExp_DecExp { .. } => {
+                let (amplitude, shift, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+                let neg_shift = -shift;
+                Ok([
+                    // y=a\left(1-e^{-\frac{x-s}{t_{1}}}\right)\left(e^{-\frac{x-s-d}{t_{2}}}\right)\left\{x>s\right\}
+                    r"y=\frac{",
+                    &format!("{amplitude:.3}"),
+                    r"}{",
+                    &format!("{inv_amp_sc:.0}", inv_amp_sc=1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE),
+                    r"}\left(1-e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift:.3}"),
+                    r"}{",
+                    &format!("{tau_a:.3}"),
+                    r"}}\right)\left(e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift:.3}"),
+                    r"}{",
+                    &format!("{tau_b:.3}"),
+                    r"}}\right)\left\{x\ge",
+                    &format!("{shift:.3}"),
+                    r"\right\}",
+                ].concat())
+            }
+            Deconvolution::Two_SatExp_DecExp { .. } => {
+                let (amplitude_1, shift_1, tau_a1, tau_b1) = (params[0], params[1], params[2], params[3]);
+                let (amplitude_2, shift_2, tau_a2, tau_b2) = (params[4], params[5], params[6], params[7]);
+                let neg_shift_1 = -shift_1;
+                let neg_shift_2 = -shift_2;
+                Ok([
+                    r"y=\frac{",
+                    &format!("{amplitude_1:.3}"),
+                    r"}{",
+                    &format!("{inv_amp_sc:.0}", inv_amp_sc=1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE),
+                    r"}\left(1-e^{-\frac{x",
+                    if neg_shift_1.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift_1:.3}"),
+                    r"}{",
+                    &format!("{tau_a1:.3}"),
+                    r"}}\right)\left(e^{-\frac{x",
+                    if neg_shift_1.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift_1:.3}"),
+                    r"}{",
+                    &format!("{tau_b1:.3}"),
+                    r"}}\right)\left\{x\ge",
+                    &format!("{shift_1:.3}"),
+                    r"\right\}+\frac{",
+                    &format!("{amplitude_2:.3}"),
+                    r"}{",
+                    &format!("{inv_amp_sc:.0}", inv_amp_sc=1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE),
+                    r"}\left(1-e^{-\frac{x",
+                    if neg_shift_2.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift_2:.3}"),
+                    r"}{",
+                    &format!("{tau_a2:.3}"),
+                    r"}}\right)\left(e^{-\frac{x",
+                    if neg_shift_2.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift_2:.3}"),
+                    r"}{",
+                    &format!("{tau_b2:.3}"),
+                    r"}}\right)\left\{x\ge",
+                    &format!("{shift_2:.3}"),
+                    r"\right\}",
+                ].concat())
+            }
+            Deconvolution::SatExp_DecExpWithConst { .. } => {
+                let (shift, height, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+                let neg_shift = -shift;
+                Ok([
+                    r"y=\left(1-e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift:.3}"),
+                    r"}{",
+                    &format!("{tau_a:.3}"),
+                    r"}}\right)\left(e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift:.3}"),
+                    r"}{",
+                    &format!("{tau_b:.3}"),
+                    r"}}+",
+                    &format!("{height:.4}"),
+                    r"\right)\left\{x\ge",
+                    &format!("{shift:.3}"),
+                    r"\right\}",
+                ].concat())
+            }
+            Deconvolution::SatExp_TwoDecExp { .. } => {
+                let (amplitude, shift, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4]);
+                let neg_shift = -shift;
+                Ok([
+                    r"y=",
+                    &format!("{amplitude:.4}"),
+                    r"\left(1-e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift:.3}"),
+                    r"}{",
+                    &format!("{tau_a:.6}"),
+                    r"}}\right)\left(e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift:.3}"),
+                    r"}{",
+                    &format!("{tau_b:.3}"),
+                    r"}}+e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{neg_shift:.3}"),
+                    r"}{",
+                    &format!("{tau_c:.3}"),
+                    r"}}\right)\left\{x\ge",
+                    &format!("{shift:.3}"),
+                    r"\right\}",
+                ].concat())
+            }
+            Deconvolution::Fourier {} => unimplemented!(),
+        }
+    }
 }
 
 
-#[derive(Debug, PartialEq)]
-pub struct DeconvolutionData<'a> {
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeconvolutionData {
     pub instrument: Spectrum,
     pub measured: Spectrum,
-    pub deconvolution: Deconvolution<'a>,
+    pub deconvolution: Deconvolution,
 }
-impl<'a> DeconvolutionData<'a> {
+impl DeconvolutionData {
     pub fn assert_steps_is_aligned(&self) {
         assert_eq!(self.instrument.step, self.measured.step);
     }
@@ -389,7 +685,7 @@ impl<'a> DeconvolutionData<'a> {
 
     /// depending on the `self.deconvolution` `params` is:
     /// - PerPoint: list of values at that point
-    /// - Exponents: list of (amplitude, tau, shift)
+    /// - Exponents: list of (amplitude, shift, tau)
     /// - Fourier: unimplemented
     pub fn calc_residue_function(&self, params: &Vec<float>) -> float {
         let points_convolved: Vec<float> = self.convolve_from_params(params);
@@ -398,23 +694,26 @@ impl<'a> DeconvolutionData<'a> {
             Deconvolution::PerPoint { diff_function_type, antispikes, .. } => {
                 diff_function_type.calc_diff_with_antispikes(&self.measured.points, &points_convolved, antispikes)
             }
-            Deconvolution::Exponents { diff_function_type, .. } => {
+            Deconvolution::Exponents { diff_function_type, .. }
+            | Deconvolution::SatExp_DecExp { diff_function_type, .. }
+            | Deconvolution::Two_SatExp_DecExp { diff_function_type, .. }
+            | Deconvolution::SatExp_DecExpWithConst { diff_function_type, .. }
+            | Deconvolution::SatExp_TwoDecExp { diff_function_type, .. }
+            => {
                 diff_function_type.calc_diff(&self.measured.points, &points_convolved)
             }
-            Deconvolution::SatDecExp { diff_function_type, .. } => {
-                diff_function_type.calc_diff(&self.measured.points, &points_convolved)
-            }
-            Deconvolution::Fourier {} => {
-                unimplemented!()
-            }
+            Deconvolution::Fourier {} => unimplemented!(),
         }
     }
 
     pub fn get_params_amount(&self) -> usize {
         match self.deconvolution {
             Deconvolution::PerPoint { .. } => self.measured.points.len(),
-            Deconvolution::Exponents { exponents_amount, .. } => exponents_amount * 3,
-            Deconvolution::SatDecExp { .. } => 4,
+            Deconvolution::Exponents { .. } => 3 * deconvolution_params::EXPONENTS_AMOUNT,
+            Deconvolution::SatExp_DecExp { .. } => 4,
+            Deconvolution::Two_SatExp_DecExp { .. } => 8,
+            Deconvolution::SatExp_DecExpWithConst { .. } => 4,
+            Deconvolution::SatExp_TwoDecExp { .. } => 5,
             Deconvolution::Fourier {} => unimplemented!(),
         }
     }
@@ -423,7 +722,10 @@ impl<'a> DeconvolutionData<'a> {
         let initial_params: Vec<float> = match &self.deconvolution {
             Deconvolution::PerPoint { initial_value, .. } => vec![*initial_value; self.get_params_amount()],
             Deconvolution::Exponents { initial_values, .. } => initial_values.to_vec(),
-            Deconvolution::SatDecExp { initial_values, .. } => initial_values.to_vec(),
+            Deconvolution::SatExp_DecExp { initial_values, .. } => initial_values.to_vec(),
+            Deconvolution::Two_SatExp_DecExp { initial_values, .. } => initial_values.to_vec(),
+            Deconvolution::SatExp_DecExpWithConst { initial_values, .. } => initial_values.to_vec(),
+            Deconvolution::SatExp_TwoDecExp { initial_values, .. } => initial_values.to_vec(),
             Deconvolution::Fourier {} => unimplemented!(),
         };
         assert_eq!(self.get_params_amount(), initial_params.len());
@@ -433,15 +735,33 @@ impl<'a> DeconvolutionData<'a> {
     pub fn is_params_ok(&self, params: &Vec<float>) -> bool {
         match self.deconvolution {
             Deconvolution::PerPoint { .. } => params.into_iter().all(|&x| x >= 0.),
-            Deconvolution::Exponents { .. } => params.into_iter().enumerate().all(|(i, &x)| match i % 3 {
-                0 => x >= 0.,
-                1 => true,
-                2 => true,
-                _ => unreachable!()
+            // Deconvolution::Exponents { .. } => params.into_iter().enumerate().all(|(i, &x)| match i % 3 {
+            //     0 => x >= 0.,
+            //     1 => true,
+            //     2 => true,
+            //     _ => unreachable!()
+            // }),
+            Deconvolution::Exponents { .. } => params.chunks(3).into_iter().all(|parts| {
+                let (amplitude, _tau, _shift) = (parts[0], parts[1], parts[2]);
+                amplitude >= 0.
             }),
-            Deconvolution::SatDecExp { .. } => {
-                let (amplitude, _, tau_1, tau_2) = (params[0], params[1], params[2], params[3]);
-                amplitude >= 0. && tau_1 >= 0. && tau_2 >= 0.
+            Deconvolution::SatExp_DecExp { .. } => {
+                let (amplitude, _, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+                amplitude >= 0. && tau_a >= 0. && tau_b >= 0.
+            }
+            Deconvolution::Two_SatExp_DecExp { .. } => {
+                let (amplitude_1, _, tau_a1, tau_b1) = (params[0], params[1], params[2], params[3]);
+                let (amplitude_2, _, tau_a2, tau_b2) = (params[4], params[5], params[6], params[7]);
+                amplitude_1 >= 0. && tau_a1 >= 0. && tau_b1 >= 0. &&
+                amplitude_2 >= 0. && tau_a2 >= 0. && tau_b2 >= 0.
+            }
+            Deconvolution::SatExp_DecExpWithConst { .. } => {
+                let (_, height, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+                height >= 0. && tau_a >= 0. && tau_b >= 0. && tau_a < tau_b
+            }
+            Deconvolution::SatExp_TwoDecExp { .. } => {
+                let (amplitude, _, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4]);
+                amplitude >= 0. && tau_a >= 0. && tau_b >= 0. && tau_c >= 0.
             }
             Deconvolution::Fourier {} => unimplemented!(),
         }
@@ -673,9 +993,9 @@ pub struct ExponentFunction {
 impl ExponentFunction {
     pub const AMPLITUDE_SCALE: float = 0.001;
 
-    pub const fn new(amplitude: float, tau: float, shift: float) -> Self {
-        Self { amplitude, tau, shift }
-    }
+    // pub const fn new(amplitude: float, shift: float, tau: float) -> Self {
+    //     Self { amplitude, shift, tau }
+    // }
 
     pub fn eval_at(&self, x: float) -> float {
         Self::eval_at_(self.amplitude, self.tau, self.shift, x)
@@ -690,11 +1010,9 @@ impl ExponentFunction {
     ///
     /// Unfortunately, no performance gain was measured.
     pub fn eval_at_(amplitude: float, tau: float, shift: float, x: float) -> float {
-        // "optimization" (i believe it don't work): somehow precalc `1/tau`.
-        let in_exp: float = (x - shift) / tau;
-        // if (if self.tau <= 0. { 1. } else { -1. }) * (x - self.shift) > 0. {
+        // "optimization" (i think it won't work): somehow precalc `1/tau`.
+        let in_exp = -(x - shift) / tau;
         if in_exp <= 0. {
-            // self.amplitude * exp(self.tau * (x - self.shift))
             Self::AMPLITUDE_SCALE * amplitude * exp(in_exp)
         } else {
             0.
@@ -798,6 +1116,7 @@ impl FitAlgorithmType {
             fit_residue_evals += 1;
             if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
             if !res_at_current_params.is_finite() { return Err("`res_at_current_params` isn't finite") }
+            if res_at_current_params >= FIT_RESIDUE_MAX_VALUE { return Err("`res_at_current_params` is too big") }
             // if !res_at_current_params.is_finite() { return None }
 
             let (fit_residue_evals_extra, ress_at_shifted_params): (Vec<u64>, Vec<float>) =
