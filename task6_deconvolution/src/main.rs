@@ -99,7 +99,7 @@ mod fit_params {
     pub const FIT_RESIDUE_MAX_VALUE : float = 1e6;
 }
 
-mod patter_search_params {
+mod pattern_search_params {
     use super::*;
     pub const INITIAL_STEP: float = 1.;
     pub const ALPHA: float = 1.01;        // step increase coefficient
@@ -1182,7 +1182,7 @@ impl FitAlgorithmType {
     }
 
     fn fit_by_pattern_search_algorithm(deconvolution_data: &DeconvolutionData) -> FitResultsOrError {
-        use crate::{fit_params::*, patter_search_params::*};
+        use crate::{fit_params::*, pattern_search_params::*};
         const DEBUG: bool = false;
 
         let f_params_amount: usize = deconvolution_data.get_params_amount();
