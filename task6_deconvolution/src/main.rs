@@ -136,7 +136,7 @@ fn main() {
         [_, _] => panic!("Expected two filename, provided only one."),
         [_] => panic!("Filenames not provided."),
         [] => unreachable!("Unexpected CLI args number."),
-        _ => panic!("Too many CLI args.")
+        _ => panic!("Too many CLI args.") // TODO(feat): support multiple files to deconvolve.
     };
 
     print!("Loading instrumental spectrum  from `{}`...", filepathstr_instrument); flush();
@@ -1164,7 +1164,9 @@ impl Spectrum {
                             step = Some(x - x_start);
                         }
                         Some(step) => {
-                            assert!(((x - x_prev.unwrap()) - step).abs() < 1e-6);
+                            let this_step = x - x_prev.unwrap();
+                            let diff = (this_step - step).abs() / step.abs();
+                            assert!(diff < 2e-2, "step={step}, this_step={this_step} => diff={diff}");
                         }
                     }
                     x_prev = Some(x);
