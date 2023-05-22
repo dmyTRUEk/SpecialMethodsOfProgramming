@@ -200,31 +200,30 @@ impl ToStringUnderscoreSeparated for u64 {
 }
 
 
-
-#[cfg(test)]
-mod separate_chunks_from_end {
-    use super::SeparateChunksFromEnd;
-    #[test]
-    fn a() {
-        assert_eq!("a", "a".separate_chunks_from_end("_-", 3));
-    }
-    #[test]
-    fn ab() {
-        assert_eq!("ab", "ab".separate_chunks_from_end("_-", 3));
-    }
-    #[test]
-    fn abc() {
-        assert_eq!("abc", "abc".separate_chunks_from_end("_-", 3));
-    }
-    #[test]
-    fn a_bcd() {
-        assert_eq!("a_-bcd", "abcd".separate_chunks_from_end("_-", 3));
-    }
-    #[test]
-    fn abcdefghijklmnopqrstuvwxyz() {
-        assert_eq!("ab_-cde_-fgh_-ijk_-lmn_-opq_-rst_-uvw_-xyz", "abcdefghijklmnopqrstuvwxyz".separate_chunks_from_end("_-", 3));
+pub trait ToStringWithSignificantDigits {
+    fn to_string_with_significant_digits(&self, significant_digits: usize) -> String;
+}
+impl ToStringWithSignificantDigits for f64 {
+    fn to_string_with_significant_digits(&self, precision: usize) -> String {
+        let a = self.abs();
+        let precision = if a > 1. {
+            let n = (1. + a.log10().floor()) as usize;
+            if n <= precision {
+                precision - n
+            } else {
+                0
+            }
+        } else if a > 0. {
+            let n = -(1. + a.log10().floor()) as usize;
+            precision + n
+        } else {
+            0
+        };
+        format!("{0:.1$}", self, precision)
     }
 }
+
+
 
 #[cfg(test)]
 mod index_of {
@@ -358,6 +357,123 @@ mod index_of {
                     assert_eq!(None, vec![14., 0., 1., 4., 8., -53., 43., 520., f64::NAN].index_of_min_with_floor(1000.));
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod separate_chunks_from_end {
+    use super::SeparateChunksFromEnd;
+    #[test]
+    fn a() {
+        assert_eq!("a", "a".separate_chunks_from_end("_-", 3));
+    }
+    #[test]
+    fn ab() {
+        assert_eq!("ab", "ab".separate_chunks_from_end("_-", 3));
+    }
+    #[test]
+    fn abc() {
+        assert_eq!("abc", "abc".separate_chunks_from_end("_-", 3));
+    }
+    #[test]
+    fn a_bcd() {
+        assert_eq!("a_-bcd", "abcd".separate_chunks_from_end("_-", 3));
+    }
+    #[test]
+    fn abcdefghijklmnopqrstuvwxyz() {
+        assert_eq!("ab_-cde_-fgh_-ijk_-lmn_-opq_-rst_-uvw_-xyz", "abcdefghijklmnopqrstuvwxyz".separate_chunks_from_end("_-", 3));
+    }
+}
+
+#[cfg(test)]
+mod to_string_with_significant_digits {
+    use super::ToStringWithSignificantDigits;
+    mod _1234_5678 {
+        use super::*;
+        const X: f64 = 1234.5678;
+        // anser isn't 1234 but 1235, bc of rounding
+        // #[ignore]
+        #[test]
+        fn _0() {
+            assert_eq!("1235", X.to_string_with_significant_digits(0));
+        }
+        #[test]
+        fn _1() {
+            assert_eq!("1235", X.to_string_with_significant_digits(1));
+        }
+        #[test]
+        fn _2() {
+            assert_eq!("1235", X.to_string_with_significant_digits(2));
+        }
+        #[test]
+        fn _3() {
+            assert_eq!("1235", X.to_string_with_significant_digits(3));
+        }
+        #[test]
+        fn _4() {
+            assert_eq!("1235", X.to_string_with_significant_digits(4));
+        }
+        #[test]
+        fn _5() {
+            assert_eq!("1234.6", X.to_string_with_significant_digits(5));
+        }
+        #[test]
+        fn _6() {
+            assert_eq!("1234.57", X.to_string_with_significant_digits(6));
+        }
+        #[test]
+        fn _7() {
+            assert_eq!("1234.568", X.to_string_with_significant_digits(7));
+        }
+        #[test]
+        fn _8() {
+            assert_eq!("1234.5678", X.to_string_with_significant_digits(8));
+        }
+        #[test]
+        fn _9() {
+            assert_eq!("1234.56780", X.to_string_with_significant_digits(9));
+        }
+        #[test]
+        fn _10() {
+            assert_eq!("1234.567800", X.to_string_with_significant_digits(10));
+        }
+    }
+    mod _000_1234 {
+        use super::*;
+        const X: f64 = 0.001234;
+        // #[ignore]
+        #[test]
+        fn _0() {
+            assert_eq!("0.00", X.to_string_with_significant_digits(0));
+        }
+        #[test]
+        fn _1() {
+            assert_eq!("0.001", X.to_string_with_significant_digits(1));
+        }
+        #[test]
+        fn _2() {
+            assert_eq!("0.0012", X.to_string_with_significant_digits(2));
+        }
+        #[test]
+        fn _3() {
+            assert_eq!("0.00123", X.to_string_with_significant_digits(3));
+        }
+        #[test]
+        fn _4() {
+            assert_eq!("0.001234", X.to_string_with_significant_digits(4));
+        }
+        #[test]
+        fn _5() {
+            assert_eq!("0.0012340", X.to_string_with_significant_digits(5));
+        }
+        #[test]
+        fn _6() {
+            assert_eq!("0.00123400", X.to_string_with_significant_digits(6));
+        }
+        #[test]
+        fn _7() {
+            assert_eq!("0.001234000", X.to_string_with_significant_digits(7));
         }
     }
 }

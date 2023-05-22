@@ -17,80 +17,96 @@ mod float_type;
 mod utils_io;
 
 use aliases_method_to_function::exp;
-use extensions::{Avg, ArrayMath, IndexOfMax, IndexOfMinWithCeil, ToStringUnderscoreSeparated};
+use extensions::{Avg, ArrayMath, IndexOfMax, IndexOfMinWithCeil, ToStringUnderscoreSeparated, ToStringWithSignificantDigits};
 use float_type::float;
 use utils_io::{flush, press_enter_to_continue};
 
 
 mod deconvolution_params {
-    use super::*;
+    use super::{Deconvolution, DiffFunctionType, float};
 
-    // pub const DECONVOLUTION: Deconvolution = Deconvolution::PerPoint {
-    //     diff_function_type: DiffFunctionType::DySqr,
-    //     // antispikes: None,
-    //     antispikes: Some(Antispikes {
-    //         antispikes_type: AntispikesType::DySqr,
-    //         antispikes_k: 1.,
-    //     }),
-    //     initial_value: 0.,
-    // };
+    pub const EXPONENTS_AMOUNT: usize = 2; // only for `Deconvolution::Exponents`.
 
-    pub const EXPONENTS_AMOUNT: usize = 2;
-    // pub const DECONVOLUTION: Deconvolution = Deconvolution::Exponents {
-    //     diff_function_type: DiffFunctionType::DySqr,
-    //     // exponents_amount: 2,
-    //     initial_values: [
-    //         // 30., -10., 30.,
-    //         // 30., 1., -2.,
-    //         1., 1., 1.,
-    //         1., 1., 1.,
-    //     ],
-    // };
+    pub const DECONVOLUTION: Deconvolution = {
 
-    // pub const DECONVOLUTION: Deconvolution = Deconvolution::SatExp_DecExp {
-    //     // WARNING?: set `FIT_ALGORITHM_MIN_STEP` to `1e-3`.
-    //     diff_function_type: DiffFunctionType::DySqr,
-    //     //               a   s   t1  t2
-    //     // initial_values: [1., 0., 1., 1.],
-    //     // initial_values: [0.04, -12., 1., 30.], // fr: 1.870
-    //     // initial_values: [1., 1., 1., 1.],
-    //     initial_values: [0.1, -10., 1., 10.],
-    // };
+        // Deconvolution::PerPoint {
+        //     diff_function_type: DiffFunctionType::DySqr,
+        //     // antispikes: None,
+        //     antispikes: Some(Antispikes {
+        //         antispikes_type: AntispikesType::DySqr,
+        //         antispikes_k: 1.,
+        //     }),
+        //     initial_value: 0.,
+        // }
 
-    // pub const DECONVOLUTION: Deconvolution = Deconvolution::Two_SatExp_DecExp {
-    //     // WARNING?: set `FIT_ALGORITHM_MIN_STEP` to `1e-3`.
-    //     diff_function_type: DiffFunctionType::DySqr,
-    //     initial_values: [
-    //         100., -10., 100., 10.,
-    //         100., -10., 100., 10.,
-    //     ],
-    // };
+        // Deconvolution::Exponents {
+        //     diff_function_type: DiffFunctionType::DySqr,
+        //     // exponents_amount: 2,
+        //     initial_values: [
+        //         // 30., -10., 30.,
+        //         // 30., 1., -2.,
+        //         1., 1., 1.,
+        //         1., 1., 1.,
+        //     ],
+        // }
 
-    // pub const DECONVOLUTION: Deconvolution = Deconvolution::SatExp_DecExpWithConst {
-    //     diff_function_type: DiffFunctionType::DySqr,
-    //     initial_values: [0.1, -1., 1e-2, 0.1, 10.],
-    //     allow_tb_less_than_ta: false,
-    // };
+        // Deconvolution::SatExp_DecExp {
+        //     // WARNING?: set `FIT_ALGORITHM_MIN_STEP` to `1e-3`.
+        //     diff_function_type: DiffFunctionType::DySqr,
+        //     //               a   s   t1  t2
+        //     // initial_values: [1., 0., 1., 1.],
+        //     // initial_values: [0.04, -12., 1., 30.], // fr: 1.870
+        //     // initial_values: [1., 1., 1., 1.],
+        //     initial_values: [0.1, -10., 1., 10.],
+        // }
 
-    // pub const DECONVOLUTION: Deconvolution = Deconvolution::SatExp_TwoDecExp {
-    //     diff_function_type: DiffFunctionType::DySqr,
-    //     // initial_values: [0.1, -10., 0.01, 1., 1.],
-    //     initial_values: [0.02, -9., 6e-6, 35., 8.],
-    // };
+        // Deconvolution::Two_SatExp_DecExp {
+        //     // WARNING?: set `FIT_ALGORITHM_MIN_STEP` to `1e-3`.
+        //     diff_function_type: DiffFunctionType::DySqr,
+        //     initial_values: [
+        //         100., -10., 100., 10.,
+        //         100., -10., 100., 10.,
+        //     ],
+        // }
 
-    pub const DECONVOLUTION: Deconvolution = Deconvolution::SatExp_TwoDecExpPlusConst {
-        diff_function_type: DiffFunctionType::DySqr,
-        // initial_values: [0.1, -5., 1e-2, 0.1, 10., 20.], // ../data3/AIS3col_e650.dat
-        initial_values: [0.03, -8., 0.085, 5e-3, 6., 18.3], // ../data3/AIS3fil_e650.dat
+        // Deconvolution::SatExp_DecExpPlusConst {
+        //     diff_function_type: DiffFunctionType::DySqr,
+        //     initial_values: [0.1, -1., 1e-2, 0.1, 10.],
+        //     allow_tb_less_than_ta: false,
+        // }
+
+        // Deconvolution::SatExp_TwoDecExp {
+        //     diff_function_type: DiffFunctionType::DySqr,
+        //     // initial_values: [0.1, -10., 0.01, 1., 1.],
+        //     initial_values: [0.02, -9., 6e-6, 35., 8.],
+        // }
+
+        // Deconvolution::SatExp_TwoDecExpPlusConst {
+        //     diff_function_type: DiffFunctionType::DySqr,
+        //     // initial_values: [0.1, -5., 1e-2, 0.1, 10., 20.],    // ../data3/AIS3col_e650.dat
+        //     initial_values: [0.01, -10., 0.1, 5e-3, 5., 20.],      // ../data3/AIS3fil_e650.dat
+        //     // initial_values: [0.03, -8., 0.085, 5e-3, 6., 18.3], // ../data3/AIS3fil_e650.dat
+        // }
+
+        Deconvolution::SatExp_TwoDecExp_SeparateConsts {
+            diff_function_type: DiffFunctionType::DySqr,
+            // initial_values: [0.1, -10., 0.01, 1., 1.],
+            initial_values: [0.02, 0.02, -9., 0.1, 35., 100.],
+        }
+
     };
 
-    pub const TRY_DIFFERENT_INITIAL_VALUES_FOREVER: bool = true;
-    pub const INITIAL_VALUES_RANDOM_SCALE: float = 20.;
-    pub const CHANGE_SING_PROBABILITY: float = 0.0;
+    pub const TRY_RANDOMIZED_INITIAL_VALUES: bool = false;
+    pub const INITIAL_VALUES_RANDOM_SCALE: float = 10.;
+    pub const CHANGE_SING_PROBABILITY: float = 0.05;
+}
+
+mod output_params {
+    pub const SIGNIFICANT_DIGITS: usize = 4;
 }
 
 mod fit_params {
-    use super::*;
+    use super::{FitAlgorithmType, float};
     // pub const INITIAL_VALUES: float = 0.0015;
     pub const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
     // pub const FIT_RESIDUE_GOAL   : float = 1e-1; // for Pattern Search
@@ -100,14 +116,14 @@ mod fit_params {
 }
 
 mod pattern_search_params {
-    use super::*;
+    use super::float;
     pub const INITIAL_STEP: float = 1.;
-    pub const ALPHA: float = 1.01;        // step increase coefficient
+    pub const ALPHA: float = 1.1;        // step increase coefficient
     pub const BETA : float = 1. / ALPHA; // step decrease coefficient
 }
 
 mod downhill_simplex_params {
-    use super::*;
+    use super::{DiffFunctionType, float};
     pub const INITIAL_SIMPLEX_SCALE: float = 0.815;
     pub const PARAMS_DIFF_TYPE: DiffFunctionType = DiffFunctionType::DySqr;
 }
@@ -186,10 +202,11 @@ fn main() {
             );
         }
     }
-    if !deconvolution_params::TRY_DIFFERENT_INITIAL_VALUES_FOREVER { return }
+    if !deconvolution_params::TRY_RANDOMIZED_INITIAL_VALUES { return }
 
     println!();
-    println!("Now trying random initial values:");
+    println!("------- NOW TRYING RANDOM INITIAL VALUES -------");
+    println!();
 
     let mut rng = thread_rng();
     let mut best_fit_residue: float = if deconvolve_results.is_ok() { deconvolve_results.unwrap().fit_residue } else { float::MAX };
@@ -214,6 +231,7 @@ fn main() {
             Deconvolution::SatExp_DecExpPlusConst { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
             Deconvolution::SatExp_TwoDecExp { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
             Deconvolution::SatExp_TwoDecExpPlusConst { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
+            Deconvolution::SatExp_TwoDecExp_SeparateConsts { ref mut initial_values, .. } => randomize_array(initial_values, &mut rng),
             Deconvolution::Fourier {} => unimplemented!(),
         }
         let deconvolution_results = deconvolution_data.deconvolve(fit_params::FIT_ALGORITHM_TYPE);
@@ -256,7 +274,8 @@ fn output_results(
 
     let params = &deconvolution_results.params;
 
-    if let Ok(desmos_function_str) = deconvolution_data.deconvolution.to_desmos_function(&params) {
+    let desmos_function_str = deconvolution_data.deconvolution.to_desmos_function(&params);
+    if let Ok(ref desmos_function_str) = desmos_function_str {
         println!("{}", desmos_function_str);
     }
 
@@ -266,7 +285,15 @@ fn output_results(
     // for (x, point) in (1010..=1089).zip(deconvolve_results.points) {
     //     writeln!(file_output, "{x}\t{p}", p=point).unwrap();
     // }
-    match deconvolution_data.deconvolution {
+    let fit_residue_and_evals_msg = format!(
+        "fit residue {fr:.3} achieved in {fre} fit residue function evals",
+        fr=deconvolution_results.fit_residue,
+        fre=deconvolution_results.fit_residue_evals,
+    );
+    // TODO(refactor):
+    // - extract function name into separate method?
+    // - extract common logic
+    match &deconvolution_data.deconvolution {
         Deconvolution::PerPoint { .. } => {
             let sd_deconvolved = Spectrum {
                 points: deconvolution_results.params.clone(),
@@ -274,48 +301,103 @@ fn output_results(
                 x_start: deconvolution_data.measured.x_start,
             };
             sd_deconvolved.write_to_file(filepathstr_output);
+            todo!("also print `fit_residue` and `fit_residue_evals`");
         }
-        Deconvolution::Exponents { .. } => {
+        self_ @ Deconvolution::Exponents { .. } => {
             let mut file_output = File::create(filepathstr_output).unwrap();
-            writeln!(file_output, "exponents params:").unwrap();
+            writeln!(file_output, "{name} params ({fit_residue_and_evals_msg}):", name=self_.get_name()).unwrap();
             for parts in deconvolution_results.params.chunks(3) {
                 let (amplitude, shift, tau) = (parts[0], parts[1], parts[2]);
-                writeln!(file_output, "{amplitude}\t{shift}\t{tau}").unwrap();
+                writeln!(file_output, "amplitude={amplitude}").unwrap();
+                writeln!(file_output, "shift={shift}").unwrap();
+                writeln!(file_output, "tau={tau}").unwrap();
+            }
+            if let Ok(desmos_function_str) = desmos_function_str {
+                writeln!(file_output, "{desmos_function_str}").unwrap();
             }
         }
-        Deconvolution::SatExp_DecExp { .. } => {
+        self_ @ Deconvolution::SatExp_DecExp { .. } => {
             let mut file_output = File::create(filepathstr_output).unwrap();
-            writeln!(file_output, "saturated decaying exponential params:").unwrap();
+            writeln!(file_output, "{name} params ({fit_residue_and_evals_msg}):", name=self_.get_name()).unwrap();
             let (amplitude, shift, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
-            writeln!(file_output, "{amplitude}\t{shift}\t{tau_a}\t{tau_b}").unwrap();
+            writeln!(file_output, "amplitude={amplitude}").unwrap();
+            writeln!(file_output, "shift={shift}").unwrap();
+            writeln!(file_output, "tau_a={tau_a}").unwrap();
+            writeln!(file_output, "tau_b={tau_b}").unwrap();
+            if let Ok(desmos_function_str) = desmos_function_str {
+                writeln!(file_output, "{desmos_function_str}").unwrap();
+            }
         }
-        Deconvolution::Two_SatExp_DecExp { .. } => {
+        self_ @ Deconvolution::Two_SatExp_DecExp { .. } => {
             let mut file_output = File::create(filepathstr_output).unwrap();
-            writeln!(file_output, "two saturated decaying exponential params:").unwrap();
+            writeln!(file_output, "{name} params ({fit_residue_and_evals_msg}):", name=self_.get_name()).unwrap();
             let (amplitude_1, shift_1, tau_a1, tau_b1) = (params[0], params[1], params[2], params[3]);
             let (amplitude_2, shift_2, tau_a2, tau_b2) = (params[4], params[5], params[6], params[7]);
-            writeln!(file_output, "{amplitude_1}\t{shift_1}\t{tau_a1}\t{tau_b1}").unwrap();
-            writeln!(file_output, "{amplitude_2}\t{shift_2}\t{tau_a2}\t{tau_b2}").unwrap();
+            writeln!(file_output, "amplitude_1={amplitude_1}").unwrap();
+            writeln!(file_output, "shift_1={shift_1}").unwrap();
+            writeln!(file_output, "tau_a1={tau_a1}").unwrap();
+            writeln!(file_output, "tau_b1={tau_b1}").unwrap();
+            writeln!(file_output, "amplitude_2={amplitude_2}").unwrap();
+            writeln!(file_output, "shift_2={shift_2}").unwrap();
+            writeln!(file_output, "tau_a2={tau_a2}").unwrap();
+            writeln!(file_output, "tau_b2={tau_b2}").unwrap();
+            if let Ok(desmos_function_str) = desmos_function_str {
+                writeln!(file_output, "{desmos_function_str}").unwrap();
+            }
         }
-        Deconvolution::SatExp_DecExpPlusConst { .. } => {
+        self_ @ Deconvolution::SatExp_DecExpPlusConst { .. } => {
             let mut file_output = File::create(filepathstr_output).unwrap();
-            writeln!(file_output, "saturated decaying exponential params:").unwrap();
-            // let (shift, height, tau_a, tau_b) = (params[0], params[1], params[2], params[3]);
+            writeln!(file_output, "{name} params ({fit_residue_and_evals_msg}):", name=self_.get_name()).unwrap();
             let (amplitude, shift, height, tau_a, tau_b) = (params[0], params[1], params[2], params[3], params[4]);
-            // writeln!(file_output, "{shift}\t{height}\t{tau_a}\t{tau_b}").unwrap();
-            writeln!(file_output, "{amplitude}\t{shift}\t{height}\t{tau_a}\t{tau_b}").unwrap();
+            writeln!(file_output, "amplitude={amplitude}").unwrap();
+            writeln!(file_output, "shift={shift}").unwrap();
+            writeln!(file_output, "height={height}").unwrap();
+            writeln!(file_output, "tau_a={tau_a}").unwrap();
+            writeln!(file_output, "tau_b={tau_b}").unwrap();
+            if let Ok(desmos_function_str) = desmos_function_str {
+                writeln!(file_output, "{desmos_function_str}").unwrap();
+            }
         }
-        Deconvolution::SatExp_TwoDecExp { .. } => {
+        self_ @ Deconvolution::SatExp_TwoDecExp { .. } => {
             let mut file_output = File::create(filepathstr_output).unwrap();
-            writeln!(file_output, "saturated decaying exponential params:").unwrap();
+            writeln!(file_output, "{name} params ({fit_residue_and_evals_msg}):", name=self_.get_name()).unwrap();
             let (amplitude, shift, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4]);
-            writeln!(file_output, "{amplitude}\t{shift}\t{tau_a}\t{tau_b}\t{tau_c}").unwrap();
+            writeln!(file_output, "amplitude={amplitude}").unwrap();
+            writeln!(file_output, "shift={shift}").unwrap();
+            writeln!(file_output, "tau_a={tau_a}").unwrap();
+            writeln!(file_output, "tau_b={tau_b}").unwrap();
+            writeln!(file_output, "tau_c={tau_c}").unwrap();
+            if let Ok(desmos_function_str) = desmos_function_str {
+                writeln!(file_output, "{desmos_function_str}").unwrap();
+            }
         }
-        Deconvolution::SatExp_TwoDecExpPlusConst { .. } => {
+        self_ @ Deconvolution::SatExp_TwoDecExpPlusConst { .. } => {
             let mut file_output = File::create(filepathstr_output).unwrap();
-            writeln!(file_output, "saturated decaying exponential params:").unwrap();
+            writeln!(file_output, "{name} params ({fit_residue_and_evals_msg}):", name=self_.get_name()).unwrap();
             let (amplitude, shift, height, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4], params[5]);
-            writeln!(file_output, "{amplitude}\t{shift}\t{height}\t{tau_a}\t{tau_b}\t{tau_c}").unwrap();
+            writeln!(file_output, "amplitude={amplitude}").unwrap();
+            writeln!(file_output, "shift={shift}").unwrap();
+            writeln!(file_output, "height={height}").unwrap();
+            writeln!(file_output, "tau_a={tau_a}").unwrap();
+            writeln!(file_output, "tau_b={tau_b}").unwrap();
+            writeln!(file_output, "tau_c={tau_c}").unwrap();
+            if let Ok(desmos_function_str) = desmos_function_str {
+                writeln!(file_output, "{desmos_function_str}").unwrap();
+            }
+        }
+        self_ @ Deconvolution::SatExp_TwoDecExp_SeparateConsts { .. } => {
+            let mut file_output = File::create(filepathstr_output).unwrap();
+            writeln!(file_output, "{name} params ({fit_residue_and_evals_msg}):", name=self_.get_name()).unwrap();
+            let (amplitude_b, amplitude_c, shift, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4], params[5]);
+            writeln!(file_output, "amplitude_b={amplitude_b}").unwrap();
+            writeln!(file_output, "amplitude_c={amplitude_c}").unwrap();
+            writeln!(file_output, "shift={shift}").unwrap();
+            writeln!(file_output, "tau_a={tau_a}").unwrap();
+            writeln!(file_output, "tau_b={tau_b}").unwrap();
+            writeln!(file_output, "tau_c={tau_c}").unwrap();
+            if let Ok(desmos_function_str) = desmos_function_str {
+                writeln!(file_output, "{desmos_function_str}").unwrap();
+            }
         }
         Deconvolution::Fourier {} => unimplemented!(),
     }
@@ -349,12 +431,14 @@ pub enum Deconvolution {
         // exponents_amount: usize,
         // initial_values: &'a [float],
         // initial_values: Vec<float>,
+        // TODO(refactor): save initial params as struct with named fields, not stupid array.
         initial_values: [float; 3*deconvolution_params::EXPONENTS_AMOUNT], // ai, si, ti, ...
     },
     /// a * (1-exp(-(x-s)/ta)) * exp(-(x-s)/tb)
     SatExp_DecExp {
         diff_function_type: DiffFunctionType,
         initial_values: [float; 4], // a, s, ta, tb
+        // initial_values: { a: float, s: float, tau_a: float, tau_b: float },
     },
     /// a1 * (1-exp(-(x-s1)/ta1)) * exp(-(x-s1)/tb1) + a2 * (1-exp(-(x-s2)/ta2)) * exp(-(x-s2)/tb2)
     Two_SatExp_DecExp {
@@ -368,7 +452,7 @@ pub enum Deconvolution {
         initial_values: [float; 5], // a, s, h, ta, tb
         allow_tb_less_than_ta: bool,
     },
-    /// (1-exp(-(x-s)/ta)) * (exp(-(x-s)/tb) + exp(-(x-s)/tc))
+    /// a * (1-exp(-(x-s)/ta)) * (exp(-(x-s)/tb) + exp(-(x-s)/tc))
     SatExp_TwoDecExp {
         diff_function_type: DiffFunctionType,
         initial_values: [float; 5], // a, s, ta, tb, tc
@@ -378,12 +462,31 @@ pub enum Deconvolution {
         diff_function_type: DiffFunctionType,
         initial_values: [float; 6], // a, s, h, ta, tb, tc
     },
+    /// (1-exp(-(x-s)/ta)) * (b*exp(-(x-s)/tb) + c*exp(-(x-s)/tc))
+    SatExp_TwoDecExp_SeparateConsts {
+        diff_function_type: DiffFunctionType,
+        initial_values: [float; 6], // b, c, s, ta, tb, tc
+    },
     Fourier {
         // unimplemented
     },
 }
 impl<'a> Deconvolution {
     pub const SAT_DEC_EXP_AMPLITUDE_SCALE: float = 1. / 1.;
+
+    pub fn get_name(&self) -> &'static str {
+        match self {
+            Deconvolution::PerPoint { .. } => todo!(),
+            Deconvolution::Exponents { .. } => "exponents",
+            Deconvolution::SatExp_DecExp { .. } => "saturated decaying exponential",
+            Deconvolution::Two_SatExp_DecExp { .. } => "two saturated decaying exponentials",
+            Deconvolution::SatExp_DecExpPlusConst { .. } => "saturated decaying exponential plus const",
+            Deconvolution::SatExp_TwoDecExp { .. } => "saturated exponential and two decaying exponentials",
+            Deconvolution::SatExp_TwoDecExpPlusConst { .. } => "saturated exponential and two decaying exponentials plus const",
+            Deconvolution::SatExp_TwoDecExp_SeparateConsts { .. } => "saturated exponential and two decaying exponentials with individual amplitudes",
+            Deconvolution::Fourier {} => unimplemented!(),
+        }
+    }
 
     pub fn params_to_points(
         &self,
@@ -508,11 +611,27 @@ impl<'a> Deconvolution {
                 }
                 points
             }
+            Self::SatExp_TwoDecExp_SeparateConsts { .. } => {
+                let mut points = vec![0.; points_len];
+                let (b, c, shift, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4], params[5]);
+                for i in 0..points_len {
+                    let x: float = i_to_x(i, points_len, (x_start, x_end));
+                    let x_m_shift: float = x - shift;
+                    let y = if x_m_shift >= 0. {
+                        (1. - exp(-x_m_shift/tau_a)) * (b*exp(-x_m_shift/tau_b) + c*exp(-x_m_shift/tau_c))
+                    } else {
+                        0.
+                    };
+                    points[i] = y;
+                }
+                points
+            }
             Self::Fourier {} => unimplemented!(),
         }
     }
 
     pub fn to_desmos_function(&self, params: &Vec<float>) -> Result<String, &'static str> {
+        use output_params::SIGNIFICANT_DIGITS as SD;
         match self {
             Deconvolution::PerPoint { .. } => Err("impossible to build this function"),
             Deconvolution::Exponents { .. } => {
@@ -529,16 +648,16 @@ impl<'a> Deconvolution {
                             [
                                 r"\left\{x",
                                 if tau > 0. { ">" } else { "<" },
-                                &format!("{neg_shift:.3}"),
+                                &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                                 r":\frac{",
-                                &format!("{amplitude:.3}"),
+                                &format!("{}", amplitude.to_string_with_significant_digits(SD)),
                                 r"}{",
-                                &format!("{inv_amp_sc:.0}", inv_amp_sc=1./ExponentFunction::AMPLITUDE_SCALE),
+                                &format!("{}", (1./ExponentFunction::AMPLITUDE_SCALE).to_string_with_significant_digits(SD)),
                                 r"}e^{-\frac{x",
                                 if neg_shift.is_sign_positive() { "+" } else { "" },
-                                &format!("{neg_shift:.3}"),
+                                &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                                 r"}{",
-                                &format!("{tau:.3}"),
+                                &format!("{}", tau.to_string_with_significant_digits(SD)),
                                 r"}},0\right\}",
                             ].concat()
                         })
@@ -551,21 +670,21 @@ impl<'a> Deconvolution {
                 Ok([
                     // y=a\left(1-e^{-\frac{x-s}{t_{1}}}\right)\left(e^{-\frac{x-s-d}{t_{2}}}\right)\left\{x>s\right\}
                     r"y=\frac{",
-                    &format!("{amplitude:.3}"),
+                    &format!("{}", amplitude.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{inv_amp_sc:.0}", inv_amp_sc=1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE),
+                    &format!("{}", (1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE).to_string_with_significant_digits(SD)),
                     r"}\left(1-e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_a:.3}"),
+                    &format!("{}", tau_a.to_string_with_significant_digits(SD)),
                     r"}}\right)\left(e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_b:.3}"),
+                    &format!("{}", tau_b.to_string_with_significant_digits(SD)),
                     r"}}\right)\left\{x\ge",
-                    &format!("{shift:.3}"),
+                    &format!("{}", shift.to_string_with_significant_digits(SD)),
                     r"\right\}",
                 ].concat())
             }
@@ -576,37 +695,37 @@ impl<'a> Deconvolution {
                 let neg_shift_2 = -shift_2;
                 Ok([
                     r"y=\frac{",
-                    &format!("{amplitude_1:.3}"),
+                    &format!("{}", amplitude_1.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{inv_amp_sc:.0}", inv_amp_sc=1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE),
+                    &format!("{}", (1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE).to_string_with_significant_digits(SD)),
                     r"}\left(1-e^{-\frac{x",
                     if neg_shift_1.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift_1:.3}"),
+                    &format!("{}", neg_shift_1.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_a1:.3}"),
+                    &format!("{}", tau_a1.to_string_with_significant_digits(SD)),
                     r"}}\right)\left(e^{-\frac{x",
                     if neg_shift_1.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift_1:.3}"),
+                    &format!("{}", neg_shift_1.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_b1:.3}"),
+                    &format!("{}", tau_b1.to_string_with_significant_digits(SD)),
                     r"}}\right)\left\{x\ge",
-                    &format!("{shift_1:.3}"),
+                    &format!("{}", shift_1.to_string_with_significant_digits(SD)),
                     r"\right\}+\frac{",
-                    &format!("{amplitude_2:.3}"),
+                    &format!("{}", amplitude_2.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{inv_amp_sc:.0}", inv_amp_sc=1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE),
+                    &format!("{}", (1./Deconvolution::SAT_DEC_EXP_AMPLITUDE_SCALE).to_string_with_significant_digits(SD)),
                     r"}\left(1-e^{-\frac{x",
                     if neg_shift_2.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift_2:.3}"),
+                    &format!("{}", neg_shift_2.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_a2:.3}"),
+                    &format!("{}", tau_a2.to_string_with_significant_digits(SD)),
                     r"}}\right)\left(e^{-\frac{x",
                     if neg_shift_2.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift_2:.3}"),
+                    &format!("{}", neg_shift_2.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_b2:.3}"),
+                    &format!("{}", tau_b2.to_string_with_significant_digits(SD)),
                     r"}}\right)\left\{x\ge",
-                    &format!("{shift_2:.3}"),
+                    &format!("{}", shift_2.to_string_with_significant_digits(SD)),
                     r"\right\}",
                 ].concat())
             }
@@ -615,21 +734,21 @@ impl<'a> Deconvolution {
                 let neg_shift = -shift;
                 Ok([
                     r"y=",
-                    &format!("{amplitude:.3}"),
+                    &format!("{}", amplitude.to_string_with_significant_digits(SD)),
                     r"\left(1-e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_a:.3}"),
+                    &format!("{}", tau_a.to_string_with_significant_digits(SD)),
                     r"}}\right)\left(e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_b:.3}"),
+                    &format!("{}", tau_b.to_string_with_significant_digits(SD)),
                     r"}}+",
-                    &format!("{height:.4}"),
+                    &format!("{}", height.to_string_with_significant_digits(SD)),
                     r"\right)\left\{x\ge",
-                    &format!("{shift:.3}"),
+                    &format!("{}", shift.to_string_with_significant_digits(SD)),
                     r"\right\}",
                 ].concat())
             }
@@ -638,24 +757,24 @@ impl<'a> Deconvolution {
                 let neg_shift = -shift;
                 Ok([
                     r"y=",
-                    &format!("{amplitude:.4}"),
+                    &format!("{}", amplitude.to_string_with_significant_digits(SD)),
                     r"\left(1-e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_a:.6}"),
+                    &format!("{}", tau_a.to_string_with_significant_digits(SD)),
                     r"}}\right)\left(e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_b:.3}"),
+                    &format!("{}", tau_b.to_string_with_significant_digits(SD)),
                     r"}}+e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_c:.3}"),
+                    &format!("{}", tau_c.to_string_with_significant_digits(SD)),
                     r"}}\right)\left\{x\ge",
-                    &format!("{shift:.3}"),
+                    &format!("{}", shift.to_string_with_significant_digits(SD)),
                     r"\right\}",
                 ].concat())
             }
@@ -664,27 +783,59 @@ impl<'a> Deconvolution {
                 let neg_shift = -shift;
                 Ok([
                     r"y=",
-                    &format!("{amplitude:.4}"),
+                    &format!("{}", amplitude.to_string_with_significant_digits(SD)),
                     r"\left(1-e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_a:.6}"),
+                    &format!("{}", tau_a.to_string_with_significant_digits(SD)),
                     r"}}\right)\left(e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_b:.3}"),
+                    &format!("{}", tau_b.to_string_with_significant_digits(SD)),
                     r"}}+e^{-\frac{x",
                     if neg_shift.is_sign_positive() { "+" } else { "" },
-                    &format!("{neg_shift:.3}"),
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
                     r"}{",
-                    &format!("{tau_c:.3}"),
+                    &format!("{}", tau_c.to_string_with_significant_digits(SD)),
                     r"}}",
                     if height.is_sign_positive() { "+" } else { "" },
-                    &format!("{height:.3}"),
+                    &format!("{}", height.to_string_with_significant_digits(SD)),
                     r"\right)\left\{x\ge",
-                    &format!("{shift:.3}"),
+                    &format!("{}", shift.to_string_with_significant_digits(SD)),
+                    r"\right\}",
+                ].concat())
+            }
+            Deconvolution::SatExp_TwoDecExp_SeparateConsts { .. } => {
+                let (b, c, shift, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4], params[5]);
+                let neg_shift = -shift;
+                Ok([
+                    r"y=\left(1-",
+                    // if a.is_sign_positive() { "-" } else { "+" },
+                    // &format!("{}", a.abs().to_string_with_significant_digits(SD)),
+                    r"e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
+                    r"}{",
+                    &format!("{}", tau_a.to_string_with_significant_digits(SD)),
+                    r"}}\right)\left(",
+                    &format!("{}", b.to_string_with_significant_digits(SD)),
+                    r"e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
+                    r"}{",
+                    &format!("{}", tau_b.to_string_with_significant_digits(SD)),
+                    r"}}",
+                    if c.is_sign_positive() { "+" } else { "" },
+                    &format!("{}", c.to_string_with_significant_digits(SD)),
+                    r"e^{-\frac{x",
+                    if neg_shift.is_sign_positive() { "+" } else { "" },
+                    &format!("{}", neg_shift.to_string_with_significant_digits(SD)),
+                    r"}{",
+                    &format!("{}", tau_c.to_string_with_significant_digits(SD)),
+                    r"}}\right)\left\{x\ge",
+                    &format!("{}", shift.to_string_with_significant_digits(SD)),
                     r"\right\}",
                 ].concat())
             }
@@ -784,6 +935,7 @@ impl DeconvolutionData {
             | Deconvolution::SatExp_DecExpPlusConst { diff_function_type, .. }
             | Deconvolution::SatExp_TwoDecExp { diff_function_type, .. }
             | Deconvolution::SatExp_TwoDecExpPlusConst { diff_function_type, .. }
+            | Deconvolution::SatExp_TwoDecExp_SeparateConsts { diff_function_type, .. }
             => {
                 diff_function_type.calc_diff(&self.measured.points, &points_convolved)
             }
@@ -800,6 +952,7 @@ impl DeconvolutionData {
             Deconvolution::SatExp_DecExpPlusConst { initial_values, .. } => initial_values.len(),
             Deconvolution::SatExp_TwoDecExp { initial_values, .. } => initial_values.len(),
             Deconvolution::SatExp_TwoDecExpPlusConst { initial_values, .. } => initial_values.len(),
+            Deconvolution::SatExp_TwoDecExp_SeparateConsts { initial_values, .. } => initial_values.len(),
             Deconvolution::Fourier {} => unimplemented!(),
         }
     }
@@ -813,6 +966,7 @@ impl DeconvolutionData {
             Deconvolution::SatExp_DecExpPlusConst { initial_values, .. } => initial_values.to_vec(),
             Deconvolution::SatExp_TwoDecExp { initial_values, .. } => initial_values.to_vec(),
             Deconvolution::SatExp_TwoDecExpPlusConst { initial_values, .. } => initial_values.to_vec(),
+            Deconvolution::SatExp_TwoDecExp_SeparateConsts { initial_values, .. } => initial_values.to_vec(),
             Deconvolution::Fourier {} => unimplemented!(),
         };
         assert_eq!(self.get_params_amount(), initial_params.len());
@@ -854,6 +1008,10 @@ impl DeconvolutionData {
                 let (amplitude, _, height, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4], params[5]);
                 amplitude >= 0. && height >= 0. && tau_a >= 0. && tau_b >= 0. && tau_c >= 0.
             }
+            Deconvolution::SatExp_TwoDecExp_SeparateConsts { .. } => {
+                let (b, c, _, tau_a, tau_b, tau_c) = (params[0], params[1], params[2], params[3], params[4], params[5]);
+                b >= 0. && c >= 0. && tau_a >= 0. && tau_b >= 0. && tau_c >= 0.
+            }
             Deconvolution::Fourier {} => unimplemented!(),
         }
     }
@@ -891,9 +1049,9 @@ pub fn convolve_by_points(points_instrument: &Vec<float>, points_deconvolved: &V
             let is_pii_in_range: bool = 0 <= pii && pii < points_instrument_len as i32;
             let is_psi_in_range: bool = 0 <= psi && psi < points_deconvolved_len as i32;
             if is_pii_in_range && is_psi_in_range {
-                let point_instrument        = points_instrument [pii as usize];
-                let point_spectrum_original = points_deconvolved[psi as usize];
-                point_convolved += point_instrument * point_spectrum_original;
+                let point_instrument  = points_instrument [pii as usize];
+                let point_deconvolved = points_deconvolved[psi as usize];
+                point_convolved += point_instrument * point_deconvolved;
             }
         }
         points_convolved[i] = point_convolved;
@@ -1196,19 +1354,19 @@ impl FitAlgorithmType {
         let mut step: float = INITIAL_STEP;
         let mut fit_residue_evals: u64 = 0;
 
+        let mut res_at_current_params: float = deconvolution_data.calc_residue_function(&params);
+        fit_residue_evals += 1;
+        if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
+        if !res_at_current_params.is_finite() { return Err("`res_at_current_params` isn't finite") }
+        // if !res_at_current_params.is_finite() { return None }
+        if res_at_current_params >= FIT_RESIDUE_MAX_VALUE { return Err("`res_at_current_params` is too big") }
+
         while step > FIT_ALGORITHM_MIN_STEP && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
-        // while residue_function(&params, &points_instrument, &points_spectrum) > FIT_RESIDUE_GOAL && fit_residue_evals < FIT_RESIDUE_EVALS_MAX {
+        // while residue_function(&params, &points_instrument, &points_spectrum) > FIT_RESIDUE_GOAL && fit_residue_evals < FIT_RESIDUE_EVALS_MAX
             if DEBUG {
                 println!("params = {:#?}", params);
                 println!("step = {}", step);
             }
-
-            let res_at_current_params: float = deconvolution_data.calc_residue_function(&params);
-            fit_residue_evals += 1;
-            if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
-            if !res_at_current_params.is_finite() { return Err("`res_at_current_params` isn't finite") }
-            if res_at_current_params >= FIT_RESIDUE_MAX_VALUE { return Err("`res_at_current_params` is too big") }
-            // if !res_at_current_params.is_finite() { return None }
 
             let (fit_residue_evals_extra, ress_at_shifted_params): (Vec<u64>, Vec<float>) =
                 (0..2*params.len())
@@ -1242,6 +1400,13 @@ impl FitAlgorithmType {
                     let param_index = index_of_min as usize / 2;
                     let delta = if index_of_min % 2 == 0 { -step } else { step };
                     params[param_index] += delta;
+
+                    res_at_current_params = ress_at_shifted_params[index_of_min];
+                    if DEBUG { println!("res_at_current_params = {}", res_at_current_params) }
+                    if !res_at_current_params.is_finite() { return Err("`res_at_current_params` isn't finite") }
+                    // if !res_at_current_params.is_finite() { return None }
+                    if res_at_current_params >= FIT_RESIDUE_MAX_VALUE { return Err("`res_at_current_params` is too big") }
+
                     step *= ALPHA;
                 }
                 None => {
@@ -1262,8 +1427,7 @@ impl FitAlgorithmType {
             // return None;
         }
         if DEBUG { println!("finished in {} iters", fit_residue_evals) }
-        let fit_residue = deconvolution_data.calc_residue_function(&params);
-        fit_residue_evals += 1;
+        let fit_residue = res_at_current_params;
         Ok(FitResults {
             params,
             fit_residue,
@@ -1434,6 +1598,954 @@ pub fn load_data_y(filename: &str) -> Vec<float> {
 
 
 
+
+#[cfg(test)]
+mod convolve {
+    mod per_point {
+        use crate::{DiffFunctionType, convolve_by_points, float};
+        mod instrument_is_identity {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 1] = [1.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+        mod instrument_is_delta3 {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 3] = [0., 1., 0.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+        mod instrument_is_delta7 {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 7] = [0., 0., 0., 1., 0., 0., 0.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let points_convolved_expected = points_spectrum_original.clone();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+        mod instrument_is_triangle5 {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 5] = [0., 0.5, 1., 0.5, 0.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let points_convolved_expected = [vec![0.; 9], vec![0.5, 1., 0.5], vec![0.; 9]].concat();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
+                    let points_convolved_expected = [vec![1., 0.5], vec![0.; 19]].concat();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
+                    let points_convolved_expected = [vec![0.; 19], vec![0.5, 1.]].concat();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-6;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let points_convolved_expected = [vec![0.; 5], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 5]].concat();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let points_convolved_expected = [vec![1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 11]].concat();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let points_convolved_expected = [vec![0.; 11], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1.]].concat();
+                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
+                    println!("points_convolved_expected = {:?}", points_convolved_expected);
+                    println!("points_convolved_actual = {:?}", points_convolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+                    println!("diff = {}", diff);
+                    assert!(diff < 0.1);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+    }
+    mod exponents {
+        // TODO:
+        // use crate::{DiffFunctionType, ExponentFunction, convolve_exponents, float};
+        // mod instrument_is_identity {
+        //     use super::*;
+        //     const POINTS_INSTRUMENT: [float; 1] = [1.];
+        //     #[test]
+        //     fn original_spectrum_is_one_exp_1_1_1() {
+        //         const EPSILON: float = 1e-6;
+        //         const RES_LEN: usize = 10;
+        //         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+        //         let exponents = vec![ExponentFunction::new(1., 1., 1.)];
+        //         let points_convolved_expected = [vec![0.; RES_LEN]].concat();
+        //         let points_convolved_actual = convolve_exponents(&POINTS_INSTRUMENT.to_vec(), &exponents, RES_LEN);
+        //         println!("points_convolved_expected = {:?}", points_convolved_expected);
+        //         println!("points_convolved_actual = {:?}", points_convolved_actual);
+        //         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
+        //         println!("diff = {}", diff);
+        //         assert!(diff < 0.1);
+        //         assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+        //     }
+        // }
+    }
+}
+
+#[cfg(test)]
+mod deconvolution_data {
+    use crate::{Deconvolution, DeconvolutionData, DiffFunctionType, Spectrum};
+    mod align_steps_to_smaller {
+        use super::*;
+        #[test]
+        fn align_i0_4_to_m0_2() {
+            assert_eq!(
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0., 0., 0.4999999999999999, 1., 0.5000000000000001, 0., 0., 0.],
+                        step: 0.2,
+                        x_start: 0.7,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
+                        step: 0.2,
+                        x_start: 0.3,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                },
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0., 1., 0., 0.,],
+                        step: 0.4,
+                        x_start: 0.7,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
+                        step: 0.2,
+                        x_start: 0.3,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                }.aligned_steps_to_smaller()
+            );
+        }
+        #[test]
+        fn align_m0_4_to_i0_2() {
+            assert_eq!(
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
+                        step: 0.2,
+                        x_start: 0.5,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0., 0., 0.4999999999999999, 1., 0.5000000000000007, 0., 0., 0.],
+                        step: 0.2,
+                        x_start: 0.9,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                },
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
+                        step: 0.2,
+                        x_start: 0.5,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0., 1., 0., 0.,],
+                        step: 0.4,
+                        x_start: 0.9,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                }.aligned_steps_to_smaller()
+            );
+        }
+    }
+    mod align_steps_to_bigger {
+        use super::*;
+        #[test]
+        fn align_m0_2_to_i0_4() {
+            assert_eq!(
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0., 1., 0., 0.,],
+                        step: 0.4,
+                        x_start: 0.1,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0.2, 0.4, 0.2, 0.],
+                        step: 0.4,
+                        x_start: 0.5,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                },
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0., 1., 0., 0.,],
+                        step: 0.4,
+                        x_start: 0.1,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
+                        step: 0.2,
+                        x_start: 0.5,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                }.aligned_steps_to_bigger()
+            );
+        }
+        #[test]
+        fn align_i0_2_to_m0_4() {
+            assert_eq!(
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0.2, 0.4, 0.2, 0.],
+                        step: 0.4,
+                        x_start: 0.5,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0., 1., 0., 0.,],
+                        step: 0.4,
+                        x_start: 0.9,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                },
+                DeconvolutionData {
+                    instrument: Spectrum {
+                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
+                        step: 0.2,
+                        x_start: 0.5,
+                    },
+                    measured: Spectrum {
+                        points: vec![0., 0., 1., 0., 0.,],
+                        step: 0.4,
+                        x_start: 0.9,
+                    },
+                    deconvolution: Deconvolution::PerPoint {
+                        diff_function_type: DiffFunctionType::DySqr,
+                        antispikes: None,
+                        initial_value: 0.,
+                    },
+                }.aligned_steps_to_bigger()
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod deconvolve {
+    mod per_point {
+        use crate::{Deconvolution, DeconvolutionData, DeconvolutionResultOrError, DiffFunctionType, FitAlgorithmType, Spectrum, float};
+        const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
+        const DECONVOLUTION: Deconvolution = Deconvolution::PerPoint {
+            diff_function_type: DiffFunctionType::DySqr,
+            antispikes: None,
+            initial_value: 0.,
+        };
+        fn deconvolve(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> DeconvolutionResultOrError {
+            let instrument: Spectrum = Spectrum {
+                points: points_instrument,
+                step: 1.,
+                x_start: 0.,
+            };
+            let measured: Spectrum = Spectrum {
+                points: points_spectrum,
+                step: 1.,
+                x_start: 0.,
+            };
+            let deconvolution_data: DeconvolutionData = DeconvolutionData {
+                instrument,
+                measured,
+                deconvolution: DECONVOLUTION,
+            };
+            deconvolution_data.deconvolve(FIT_ALGORITHM_TYPE)
+        }
+        mod instrument_is_identity {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 1] = [1.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+        mod instrument_is_delta3 {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 3] = [0., 1., 0.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+        mod instrument_is_delta7 {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 7] = [0., 0., 0., 1., 0., 0., 0.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let points_deconvolved_expected = points_spectrum_convolved.clone();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+        mod instrument_is_triangle5 {
+            use super::*;
+            const POINTS_INSTRUMENT: [float; 5] = [0., 0.5, 1., 0.5, 0.];
+            mod original_spectrum_is_delta_21 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 9], vec![0.5, 1., 0.5], vec![0.; 9]].concat();
+                    let points_deconvolved_expected = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1., 0.5], vec![0.; 19]].concat();
+                    let points_deconvolved_expected = [vec![1.], vec![0.; 20]].concat();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 19], vec![0.5, 1.]].concat();
+                    let points_deconvolved_expected = [vec![0.; 20], vec![1.]].concat();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+            mod original_spectrum_is_two_deltas_20 {
+                use super::*;
+                const EPSILON: float = 1e-4;
+                #[test]
+                fn at_center() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 5], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 5]].concat();
+                    let points_deconvolved_expected = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_left() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 11]].concat();
+                    let points_deconvolved_expected = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+                #[test]
+                fn at_right() {
+                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
+                    let points_spectrum_convolved = [vec![0.; 11], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1.]].concat();
+                    let points_deconvolved_expected = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
+                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
+                    let points_deconvolved_actual = deconvolve_results.params;
+                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
+                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
+                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
+                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
+                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
+                }
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod spectrum {
@@ -1900,954 +3012,6 @@ mod spectrum {
                     x_start: 0.7,
                 }.recalculated_with_step(0.8)
             );
-        }
-    }
-}
-
-#[cfg(test)]
-mod deconvolution_data {
-    use crate::{Deconvolution, DeconvolutionData, DiffFunctionType, Spectrum};
-    mod align_steps_to_smaller {
-        use super::*;
-        #[test]
-        fn align_i0_4_to_m0_2() {
-            assert_eq!(
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0., 0., 0.4999999999999999, 1., 0.5000000000000001, 0., 0., 0.],
-                        step: 0.2,
-                        x_start: 0.7,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
-                        step: 0.2,
-                        x_start: 0.3,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                },
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0., 1., 0., 0.,],
-                        step: 0.4,
-                        x_start: 0.7,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
-                        step: 0.2,
-                        x_start: 0.3,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                }.aligned_steps_to_smaller()
-            );
-        }
-        #[test]
-        fn align_m0_4_to_i0_2() {
-            assert_eq!(
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
-                        step: 0.2,
-                        x_start: 0.5,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0., 0., 0.4999999999999999, 1., 0.5000000000000007, 0., 0., 0.],
-                        step: 0.2,
-                        x_start: 0.9,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                },
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
-                        step: 0.2,
-                        x_start: 0.5,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0., 1., 0., 0.,],
-                        step: 0.4,
-                        x_start: 0.9,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                }.aligned_steps_to_smaller()
-            );
-        }
-    }
-    mod align_steps_to_bigger {
-        use super::*;
-        #[test]
-        fn align_m0_2_to_i0_4() {
-            assert_eq!(
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0., 1., 0., 0.,],
-                        step: 0.4,
-                        x_start: 0.1,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0.2, 0.4, 0.2, 0.],
-                        step: 0.4,
-                        x_start: 0.5,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                },
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0., 1., 0., 0.,],
-                        step: 0.4,
-                        x_start: 0.1,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
-                        step: 0.2,
-                        x_start: 0.5,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                }.aligned_steps_to_bigger()
-            );
-        }
-        #[test]
-        fn align_i0_2_to_m0_4() {
-            assert_eq!(
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0.2, 0.4, 0.2, 0.],
-                        step: 0.4,
-                        x_start: 0.5,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0., 1., 0., 0.,],
-                        step: 0.4,
-                        x_start: 0.9,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                },
-                DeconvolutionData {
-                    instrument: Spectrum {
-                        points: vec![0., 0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1, 0.],
-                        step: 0.2,
-                        x_start: 0.5,
-                    },
-                    measured: Spectrum {
-                        points: vec![0., 0., 1., 0., 0.,],
-                        step: 0.4,
-                        x_start: 0.9,
-                    },
-                    deconvolution: Deconvolution::PerPoint {
-                        diff_function_type: DiffFunctionType::DySqr,
-                        antispikes: None,
-                        initial_value: 0.,
-                    },
-                }.aligned_steps_to_bigger()
-            );
-        }
-    }
-}
-
-#[cfg(test)]
-mod convolve {
-    mod per_point {
-        use crate::{DiffFunctionType, convolve_by_points, float};
-        mod instrument_is_identity {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 1] = [1.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-        }
-        mod instrument_is_delta3 {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 3] = [0., 1., 0.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-        }
-        mod instrument_is_delta7 {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 7] = [0., 0., 0., 1., 0., 0., 0.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let points_convolved_expected = points_spectrum_original.clone();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-        }
-        mod instrument_is_triangle5 {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 5] = [0., 0.5, 1., 0.5, 0.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let points_convolved_expected = [vec![0.; 9], vec![0.5, 1., 0.5], vec![0.; 9]].concat();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 20]].concat();
-                    let points_convolved_expected = [vec![1., 0.5], vec![0.; 19]].concat();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 20], vec![1.]].concat();
-                    let points_convolved_expected = [vec![0.; 19], vec![0.5, 1.]].concat();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-6;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let points_convolved_expected = [vec![0.; 5], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 5]].concat();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let points_convolved_expected = [vec![1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 11]].concat();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_original = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let points_convolved_expected = [vec![0.; 11], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1.]].concat();
-                    let points_convolved_actual = convolve_by_points(&POINTS_INSTRUMENT.to_vec(), &points_spectrum_original);
-                    println!("points_convolved_expected = {:?}", points_convolved_expected);
-                    println!("points_convolved_actual = {:?}", points_convolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-                    println!("diff = {}", diff);
-                    assert!(diff < 0.1);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-        }
-    }
-    mod exponents {
-        // TODO:
-        // use crate::{DiffFunctionType, ExponentFunction, convolve_exponents, float};
-        // mod instrument_is_identity {
-        //     use super::*;
-        //     const POINTS_INSTRUMENT: [float; 1] = [1.];
-        //     #[test]
-        //     fn original_spectrum_is_one_exp_1_1_1() {
-        //         const EPSILON: float = 1e-6;
-        //         const RES_LEN: usize = 10;
-        //         println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-        //         let exponents = vec![ExponentFunction::new(1., 1., 1.)];
-        //         let points_convolved_expected = [vec![0.; RES_LEN]].concat();
-        //         let points_convolved_actual = convolve_exponents(&POINTS_INSTRUMENT.to_vec(), &exponents, RES_LEN);
-        //         println!("points_convolved_expected = {:?}", points_convolved_expected);
-        //         println!("points_convolved_actual = {:?}", points_convolved_actual);
-        //         let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_convolved_expected, &points_convolved_actual);
-        //         println!("diff = {}", diff);
-        //         assert!(diff < 0.1);
-        //         assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-        //     }
-        // }
-    }
-}
-
-#[cfg(test)]
-mod deconvolve {
-    mod per_point {
-        use crate::{Deconvolution, DeconvolutionData, DeconvolutionResultOrError, DiffFunctionType, FitAlgorithmType, Spectrum, float};
-        const FIT_ALGORITHM_TYPE: FitAlgorithmType = FitAlgorithmType::PatternSearch;
-        const DECONVOLUTION: Deconvolution = Deconvolution::PerPoint {
-            diff_function_type: DiffFunctionType::DySqr,
-            antispikes: None,
-            initial_value: 0.,
-        };
-        fn deconvolve(points_instrument: Vec<float>, points_spectrum: Vec<float>) -> DeconvolutionResultOrError {
-            let instrument: Spectrum = Spectrum {
-                points: points_instrument,
-                step: 1.,
-                x_start: 0.,
-            };
-            let measured: Spectrum = Spectrum {
-                points: points_spectrum,
-                step: 1.,
-                x_start: 0.,
-            };
-            let deconvolution_data: DeconvolutionData = DeconvolutionData {
-                instrument,
-                measured,
-                deconvolution: DECONVOLUTION,
-            };
-            deconvolution_data.deconvolve(FIT_ALGORITHM_TYPE)
-        }
-        mod instrument_is_identity {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 1] = [1.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-        }
-        mod instrument_is_delta3 {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 3] = [0., 1., 0.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-        }
-        mod instrument_is_delta7 {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 7] = [0., 0., 0., 1., 0., 0., 0.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1.], vec![0.; 20]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 20], vec![1.]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let points_deconvolved_expected = points_spectrum_convolved.clone();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-        }
-        mod instrument_is_triangle5 {
-            use super::*;
-            const POINTS_INSTRUMENT: [float; 5] = [0., 0.5, 1., 0.5, 0.];
-            mod original_spectrum_is_delta_21 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 9], vec![0.5, 1., 0.5], vec![0.; 9]].concat();
-                    let points_deconvolved_expected = [vec![0.; 10], vec![1.], vec![0.; 10]].concat();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1., 0.5], vec![0.; 19]].concat();
-                    let points_deconvolved_expected = [vec![1.], vec![0.; 20]].concat();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 19], vec![0.5, 1.]].concat();
-                    let points_deconvolved_expected = [vec![0.; 20], vec![1.]].concat();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
-            mod original_spectrum_is_two_deltas_20 {
-                use super::*;
-                const EPSILON: float = 1e-4;
-                #[test]
-                fn at_center() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 5], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 5]].concat();
-                    let points_deconvolved_expected = [vec![0.; 6], vec![1.], vec![0.; 6], vec![1.], vec![0.; 6]].concat();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_left() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![1., 0.5], vec![0.; 4], vec![0.5, 1., 0.5], vec![0.; 11]].concat();
-                    let points_deconvolved_expected = [vec![1.], vec![0.; 6], vec![1.], vec![0.; 12]].concat();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-                #[test]
-                fn at_right() {
-                    println!("POINTS_INSTRUMENT = {:?}", POINTS_INSTRUMENT);
-                    let points_spectrum_convolved = [vec![0.; 11], vec![0.5, 1., 0.5], vec![0.; 4], vec![0.5, 1.]].concat();
-                    let points_deconvolved_expected = [vec![0.; 12], vec![1.], vec![0.; 6], vec![1.]].concat();
-                    let deconvolve_results = deconvolve(POINTS_INSTRUMENT.to_vec(), points_spectrum_convolved).unwrap();
-                    let points_deconvolved_actual = deconvolve_results.params;
-                    println!("fit_residue_evals = {}", deconvolve_results.fit_residue_evals);
-                    println!("points_deconvolved_expected = {:?}", points_deconvolved_expected);
-                    println!("points_deconvolved_actual = {:?}", points_deconvolved_actual);
-                    let diff = DiffFunctionType::DySqrPerEl.calc_diff(&points_deconvolved_expected, &points_deconvolved_actual);
-                    assert!(diff < EPSILON, "expected `diff < EPSILON, but diff={} and EPSILON={}`", diff, EPSILON);
-                }
-            }
         }
     }
 }
